@@ -5,3 +5,4 @@ scipy
 iapws
 mplcursors
 streamlit
+streamlit-javascript

@@ -1,19 +1,29 @@
-# Cicli Termodinamici - Suite Didattica Avanzata
+# Thermodynamic Cycles - Web Suite ⚡ / Cicli Termodinamici
+*Created by **Prof. Ing. Andrea Viola** | Creato dal **Prof. Ing. Andrea Viola***
+*For educational purposes only | Esclusivamente per scopi didattici*
 
-Una suite software didattica e interattiva per l'insegnamento e lo studio dei principali cicli termodinamici.
-Sviluppata interamente in Python con **CustomTkinter** e **Matplotlib**, permette di visualizzare dinamicamente l'interazione tra i parametri fisici e le prestazioni (rendimenti, lavori, calori).
+🇬🇧 An interactive educational web application for teaching and studying ideal and real thermodynamic cycles.
+🇮🇹 Una suite software didattica e interattiva per l'insegnamento e lo studio dei principali cicli termodinamici.
 
-## 🚀 Funzionalità Principali
-Il programma integra **5 moduli completi** in un'unica interfaccia unificata:
-1. **💧 Ciclo Rankine (Vapore/Acqua)**: Include analisi IAPWS-IF97 completa, campana di saturazione esatta, titolo vapore e analisi macchine reali.
-2. **🔥 Ciclo Brayton (Turbogas)**: Analisi di compressore, camera di combustione e turbina a gas, inclusi eccesso d'aria e back-work ratio (BWR).
-3. **⚙️ Ciclo Otto (Motore a scoppio)**: Ciclo termodinamico a volume costante con grafici P-v e T-s.
-4. **🛢️ Ciclo Diesel (Motore Diesel)**: Ciclo ideale e reale per motori ad accensione spontanea con grafici P-v e T-s.
-5. **❄️ Ciclo Frigorifero (Pompa di Calore)**: Analisi delle prestazioni frigorifere e di riscaldamento (Coefficient of Performance - COP).
+Developed in Python with **Streamlit** and **Matplotlib**, it allows dynamic visualization of physical parameters and performance (efficiency, work, heat), with **automatic English/Italian translation** based on the user's browser.
 
-### Grafici Avanzati
-*   I grafici distinguono visivamente il **Ciclo Reale (linee continue o a colori vibranti)** dal **Ciclo Ideale / di Carnot (linee tratteggiate)**.
-*   Punti interattivi ai nodi delle trasformazioni (tooltip on hover per leggere Entalpia, Entropia, Temperatura, e Pressione).
+## 📂 Project Structure / Struttura del Progetto
+- `streamlit_app.py`: The main Web Application file (Deploy this on Streamlit Community Cloud).
+- `calcolatore_*.py`: Desktop backend modules (Tkinter + Matplotlib) for local use.
+- `cicli_termodinamici.py`: Desktop Unified Launcher for Windows/Mac.
+- `requirements.txt`: Python dependencies.
+
+## 🚀 Main Features / Funzionalità
+The program integrates **5 complete modules**:
+1. **💧 Rankine Cycle (Steam/Water)**: IAPWS-IF97 analysis, exact saturation dome, vapor quality.
+2. **🔥 Brayton Cycle (Gas Turbine)**: Compressor, combustion chamber, turbine analysis, BWR.
+3. **⚙️ Otto Cycle (Spark Ignition Engine)**: P-v and T-s charts.
+4. **🛢️ Diesel Cycle (Compression Ignition)**: P-v and T-s charts.
+5. **❄️ Refrigeration Cycle (Heat Pump)**: COP analysis for cooling and heating.
+
+### Advanced Graphics
+*   Visual distinction between **Real Cycle (solid lines)** and **Ideal/Carnot Cycle (dashed lines)**.
+*   Interactive Plant Schematics alongside Thermodynamic Diagrams (T-s, P-v, P-h).
 
 ## 📥 Installazione e Avvio
 Per eseguire l'applicazione web in locale è necessario **Python 3.9+**.
