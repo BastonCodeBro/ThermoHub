@@ -16,7 +16,7 @@ Il programma integra **5 moduli completi** in un'unica interfaccia unificata:
 *   Punti interattivi ai nodi delle trasformazioni (tooltip on hover per leggere Entalpia, Entropia, Temperatura, e Pressione).
 
 ## 📥 Installazione e Avvio
-Per eseguire il programma sorgente è necessario **Python 3.9+**.
+Per eseguire l'applicazione web in locale è necessario **Python 3.9+**.
 
 1. Clona il repository:
    ```bash
@@ -27,24 +27,25 @@ Per eseguire il programma sorgente è necessario **Python 3.9+**.
    ```bash
    pip install -r requirements.txt
    ```
-3. Avvia l'applicazione principale:
+3. Avvia la Web App su Streamlit:
    ```bash
-   python cicli_termodinamici.py
+   streamlit run streamlit_app.py
    ```
+   *Si aprirà una scheda nel tuo browser con l'applicazione!*
 
-## 🌐 Distribuzione agli Studenti
-Trattandosi di un'applicazione desktop grafica, il modo più semplice per distribuirla agli studenti **gratuitamente** è creare un file eseguibile o fornirne il download diretto tramite le "Releases" di GitHub:
+## 🌐 Deploy su Streamlit Community Cloud (Sito Pubblico Gratuito)
+L'applicazione è ora una VERA Web App. Per renderla accessibile gratis a chiunque dal proprio browser:
 
-### Creare un Eseguibile per Windows (.exe)
-Esegui questo comando dal terminale per pacchettizzare il programma in un singolo file eseguibile che non richiede Python installato:
-```bash
-pip install pyinstaller
-pyinstaller --noconsole --onefile cicli_termodinamici.py
-```
-Troverai il file `.exe` nella cartella `dist/`. Potrai caricarlo su GitHub Releases o condividerlo (es. su Google Drive/Moodle).
+1. Fai Login su [Streamlit Community Cloud](https://share.streamlit.io/) usando il tuo account GitHub.
+2. Clicca su **"New app"**.
+3. Seleziona questa repository (`BastonCodeBro/Thermodynamics-Cycles-Open_Source`).
+4. Nel campo `Main file path` inserisci: `streamlit_app.py`
+5. Clicca **Deploy!**
 
-### Versione Web (Sito Gratuito)
-Se in futuro vorrai portare questo calcolatore *direttamente su browser*, ti consiglio di esplorare framework come **Streamlit** (hanno un hosting gratuito "Streamlit Community Cloud") o **PyScript**. L'attuale interfaccia è basata su *CustomTkinter* che gira nativamente in locale su PC.
+In pochi minuti Streamlit creerà un link pubblico gratuito (es. `https://nome-scelto.streamlit.app`) che i tuoi studenti potranno usare da PC o cellulare senza scaricare nulla.
+
+### Versione Desktop Inclusa
+Se si preferisce usare il programma locale tradizionale (con GUI Tkinter nativa), lanciare `python cicli_termodinamici.py` oppure creare l'eseguibile con `pyinstaller --noconsole --onefile cicli_termodinamici.py`.
 
 ## 📝 Licenza
 Progetto rilasciato sotto licenza MIT - sentiti libero di usarlo e modificarlo per la didattica!
