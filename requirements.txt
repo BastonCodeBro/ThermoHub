@@ -6,3 +6,4 @@ iapws
 mplcursors
 streamlit
 streamlit-javascript
+plotly
