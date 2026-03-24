@@ -8,6 +8,10 @@ from iapws import IAPWS97
 import io
 from matplotlib.backends.backend_pdf import PdfPages
 
+# New Modular Imports
+from core.thermo import get_iapws_robust, steam_point_to_dict, GasPoint, get_polytropic_path
+from components.ui import apply_custom_style, plotly_base, render_hero, render_metric_row
+
 
 def create_pdf_report(cycle_name, report_text, points_df, fig_ts):
     buf = io.BytesIO()
@@ -70,85 +74,7 @@ THEME = {
     "gray": "#6c757d",
 }
 
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-    
-    .block-container { padding-top: 1rem; padding-bottom: 2rem; max-width: 1550px; }
-    
-    .stApp {
-        background: #ffffff;
-        color: #0d1c29;
-        font-family: 'Inter', sans-serif;
-    }
-
-    /* Glassmorphism Panels */
-    .hero {
-        margin-bottom: 2rem; padding: 2rem 2.5rem;
-        border-radius: 20px; 
-        background: linear-gradient(135deg, #f0f7ff, #e6eff7);
-        border: 1px solid rgba(13, 59, 102, 0.2);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    }
-    .hero h1 { 
-        margin: 0; 
-        background: linear-gradient(90deg, #0d3b66, #00509d);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3rem; font-weight: 700; line-height: 1.1; 
-    }
-    .hero p { margin: 1rem 0 0 0; color: #0d3b66; font-size: 1.2rem; }
-    .authorline { font-size: 0.9rem; opacity: 0.8; margin-top: 0.8rem; color: #0077b6; }
-
-    /* CAD Report Style */
-    .cad-report {
-        font-family: 'JetBrains Mono', 'Consolas', monospace;
-        background: #f8fbff;
-        border: 1px solid #0d3b66;
-        border-radius: 10px;
-        padding: 1.5rem;
-        color: #0d3b66;
-        line-height: 1.6;
-        font-size: 0.9rem;
-    }
-
-    /* Metrics Styling */
-    div[data-testid="stMetric"] {
-        background: #ffffff;
-        border: 1px solid rgba(13, 59, 102, 0.15);
-        border-radius: 12px; padding: 1rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-    }
-
-    /* Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] { gap: 1rem; }
-    .stTabs [data-baseweb="tab"] {
-        background: #f0f4f8;
-        border: 1px solid #d1d9e0;
-        color: #4a5568;
-    }
-    .stTabs [aria-selected="true"] {
-        background: #0d3b66 !important;
-        color: #ffffff !important;
-    }
-
-    /* Input Fields */
-    .stNumberInput input, .stTextInput input {
-        background: #ffffff !important;
-        border: 1px solid #ccd6e0 !important;
-        color: #0d1c29 !important;
-    }
-    
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #f8fafc;
-        border-right: 1px solid #e2e8f0;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+apply_custom_style()
 
 
 def get_browser_lang():
@@ -230,27 +156,12 @@ with st.sidebar:
     st.session_state["app_lang"] = lang
     t = dict_t[lang]
 
-st.markdown(
-    f"""
-    <div class="hero">
-        <h1>{t['main_title']}</h1>
-        <p>{t['subtitle']}</p>
-        <div class="authorline">{t['author']}</div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+render_hero(t)
 
 st.divider()
 
 
-def get_iapws_robust(**args):
-    try:
-        return IAPWS97(**args)
-    except Exception:
-        return None
-
-
+# Utility functions migrated to core.thermo and components.ui
 def quality_label(x):
     if x is None or (isinstance(x, float) and np.isnan(x)):
         return "n/d"
@@ -262,91 +173,9 @@ def quality_label(x):
         return "vap. sat."
     return f"{x:.3f}"
 
-
 def steam_point(name, state):
+    # Standardizing to dictionary format used in components.ui
     return {"name": name, "P": state.P * 10.0, "T": state.T - 273.15, "h": state.h, "s": state.s, "v": state.v, "x": state.x}
-
-
-@st.cache_data(show_spinner=False)
-def build_steam_dome():
-    pressures = np.logspace(np.log10(0.001), np.log10(22.0), 160)
-    sat_f = {"P": [], "T": [], "v": [], "h": [], "s": []}
-    sat_g = {"P": [], "T": [], "v": [], "h": [], "s": []}
-    for p in pressures:
-        try:
-            st_f = IAPWS97(P=p, x=0)
-            sat_f["P"].append(st_f.P * 10.0); sat_f["T"].append(st_f.T - 273.15); sat_f["v"].append(st_f.v); sat_f["h"].append(st_f.h); sat_f["s"].append(st_f.s)
-        except Exception:
-            pass
-        try:
-            st_g = IAPWS97(P=p, x=1)
-            sat_g["P"].append(st_g.P * 10.0); sat_g["T"].append(st_g.T - 273.15); sat_g["v"].append(st_g.v); sat_g["h"].append(st_g.h); sat_g["s"].append(st_g.s)
-        except Exception:
-            pass
-    return sat_f, sat_g
-
-
-def plotly_base(title, x_title, y_title, xlog=False, ylog=False, height=460):
-    fig = go.Figure()
-    fig.update_layout(
-        title=title,
-        height=height,
-        paper_bgcolor=THEME["bg"],
-        plot_bgcolor=THEME["panel"],
-        font=dict(color=THEME["text"]),
-        margin=dict(l=20, r=20, t=52, b=20),
-        legend=dict(bgcolor="rgba(255, 255, 255, 0.9)", bordercolor=THEME["cyan"], borderwidth=1),
-        hoverlabel=dict(bgcolor="#ffffff", bordercolor=THEME["cyan"], font=dict(color=THEME["text"])),
-    )
-    fig.update_xaxes(title=x_title, showgrid=True, gridcolor=THEME["grid"], zeroline=False, type="log" if xlog else "linear")
-    fig.update_yaxes(title=y_title, showgrid=True, gridcolor=THEME["grid"], zeroline=False, type="log" if ylog else "linear")
-    return fig
-
-
-def add_line(fig, x, y, name, color, dash="solid", width=3):
-    fig.add_trace(go.Scatter(x=x, y=y, mode="lines", name=name, line=dict(color=color, width=width, dash=dash), hoverinfo="skip"))
-
-
-def add_steam_points(fig, points, x_key, y_key, name, color):
-    customdata = [[p["name"], p["P"], p["T"], p["h"], p["s"], p["v"], quality_label(p.get("x"))] for p in points]
-    fig.add_trace(
-        go.Scatter(
-            x=[p[x_key] for p in points],
-            y=[p[y_key] for p in points],
-            mode="lines+markers+text",
-            name=name,
-            text=[p["name"] for p in points],
-            textposition="top center",
-            line=dict(color=color, width=3),
-            marker=dict(size=10, color=color, line=dict(color="#ffffff", width=2)),
-            customdata=customdata,
-            hovertemplate="<b>%{customdata[0]}</b><br>P = %{customdata[1]:.3f} bar<br>T = %{customdata[2]:.2f} °C<br>h = %{customdata[3]:.2f} kJ/kg<br>s = %{customdata[4]:.4f} kJ/kgK<br>v = %{customdata[5]:.5e} m³/kg<br>x = %{customdata[6]}<extra></extra>",
-        )
-    )
-
-
-def add_generic_points(fig, points, x_key, y_key, name, color):
-    customdata = [[p["name"], p["P"], p["T"], p["h"], p["s"], p["v"]] for p in points]
-    fig.add_trace(
-        go.Scatter(
-            x=[p[x_key] for p in points],
-            y=[p[y_key] for p in points],
-            mode="lines+markers+text",
-            name=name,
-            text=[p["name"] for p in points],
-            textposition="top center",
-            line=dict(color=color, width=3),
-            marker=dict(size=10, color=color, line=dict(color="#ffffff", width=2)),
-            customdata=customdata,
-            hovertemplate="<b>%{customdata[0]}</b><br>P = %{customdata[1]:.3f} bar<br>T = %{customdata[2]:.2f} °C<br>h = %{customdata[3]:.2f} kJ/kg<br>s = %{customdata[4]:.4f} kJ/kgK<br>v = %{customdata[5]:.5e} m³/kg<extra></extra>",
-        )
-    )
-
-
-def add_steam_dome(fig, x_key, y_key):
-    sat_f, sat_g = build_steam_dome()
-    add_line(fig, sat_f[x_key], sat_f[y_key], "Liquido saturo", THEME["cyan"], width=2)
-    add_line(fig, sat_g[x_key], sat_g[y_key], "Vapore saturo", THEME["cyan"], width=2)
 
 
 def draw_rankine_schema(p1, p2, p3, p4):
@@ -511,10 +340,11 @@ if "Acqua" in ciclo:
     p_net = l_net * st.session_state["water_portata"]
 
     with col_main:
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Lavoro Netto", f"{l_net:.2f} kJ/kg")
-        m2.metric("Rendimento", f"{eta_cycle:.2f} %")
-        m3.metric("Potenza Netta", f"{p_net/1000:.2f} MW")
+        render_metric_row({
+            "Lavoro Netto": f"{l_net:.2f} kJ/kg",
+            "Rendimento": f"{eta_cycle:.2f} %",
+            "Potenza Netta": f"{p_net/1000:.2f} MW"
+        })
         
         tab_list, tab_ts, tab_pv, tab_hs, tab_rep = st.tabs(["State Points", "T-s Diagram", "P-v Diagram", "h-s Diagram", "Analysis Report"])
         
@@ -529,7 +359,7 @@ if "Acqua" in ciclo:
                     st.rerun()
 
         with tab_ts:
-            fig = plotly_base("Diagramma T-s (Acqua/Vapore)", "s (kJ/kgK)", "T (°C)")
+            fig = plotly_base("Diagramma T-s (Acqua/Vapore)", "s (kJ/kgK)", "T (°C)", THEME)
             add_steam_dome(fig, "s", "T")
             if w_pts: add_steam_points(fig, w_pts, "s", "T", "Punti di Stato", THEME["gold"])
             # Close cycle for visualization if multiple points
@@ -539,13 +369,13 @@ if "Acqua" in ciclo:
             st.plotly_chart(fig, use_container_width=True)
 
         with tab_pv:
-            fig = plotly_base("Diagramma P-v", "v (m³/kg)", "P (bar)", xlog=True, ylog=True)
+            fig = plotly_base("Diagramma P-v", "v (m³/kg)", "P (bar)", THEME, xlog=True, ylog=True)
             add_steam_dome(fig, "v", "P")
             if w_pts: add_steam_points(fig, w_pts, "v", "P", "Punti di Stato", THEME["cyan"])
             st.plotly_chart(fig, use_container_width=True)
             
         with tab_hs:
-            fig = plotly_base("Diagramma Mollier h-s", "s (kJ/kgK)", "h (kJ/kg)")
+            fig = plotly_base("Diagramma Mollier h-s", "s (kJ/kgK)", "h (kJ/kg)", THEME)
             add_steam_dome(fig, "s", "h")
             if w_pts: add_steam_points(fig, w_pts, "s", "h", "Punti di Stato", THEME["red"])
             st.plotly_chart(fig, use_container_width=True)
@@ -608,12 +438,11 @@ elif "Brayton" in ciclo:
             eta_m = st.number_input("η_mechanical", value=0.99, step=0.01)
             m_dot = st.number_input("Air Flow ṁ (kg/s)", value=50.0)
 
-    # --- Calculations ---
+    # --- Calculations with GasCore ---
     t1k, t3k = t1 + 273.15, t3 + 273.15
     # Compression
     t2sk = t1k * ((p2 / p1) ** ((ka - 1) / ka))
     t2rk = t1k + (t2sk - t1k) / eta_ic
-    l_tc = cpa * (t2sk - t1k)
     l_ic = cpa * (t2rk - t1k)
     p_ic = m_dot * l_ic
     p_ac = p_ic / eta_m
@@ -631,44 +460,59 @@ elif "Brayton" in ciclo:
     p_it = m_gas * l_it
     p_e_lorda = p_it * eta_m
     
-    # Bottom Line
+    # Performance
     p_e_netta = p_e_lorda - p_ac
-    q_in = g_c * eta_cc * hi
+    q_in = g_c * (eta_cc * hi)
     eta_te = (p_e_netta / q_in) * 100 if q_in > 0 else 0
     bwr = (p_ac / p_e_lorda) * 100 if p_e_lorda > 0 else 0
-    cons_spec = (g_c * 3600) / p_e_netta if p_e_netta > 0 else 0 # kg/kWh
+    cons_spec = (g_c * 3600) / (p_e_netta / 1000) if p_e_netta > 0 else 0
 
-    # --- Data Points for Plot ---
-    def ent_air(tk, pb): return cpa * np.log(tk/288.15) - 0.287 * np.log(pb/1.013)
-    def ent_gas(tk, pb): return cpg_esp * np.log(tk/288.15) - (0.287*0.95) * np.log(pb/1.013)
-    
-    pts = [
-        {"name": "1", "P": p1, "T": t1, "h": cpa*t1k, "s": ent_air(t1k, p1), "v": 0.287*t1k/(p1*100)},
-        {"name": "2", "P": p2, "T": t2rk-273.15, "h": cpa*t2rk, "s": ent_air(t2rk, p2), "v": 0.287*t2rk/(p2*100)},
-        {"name": "3", "P": p2, "T": t3, "h": cpg_esp*t3k, "s": ent_gas(t3k, p2), "v": 0.287*t3k/(p2*100)},
-        {"name": "4", "P": p4, "T": t4rk-273.15, "h": cpg_esp*t4rk, "s": ent_gas(t4rk, p4), "v": 0.287*t4rk/(p4*100)},
-        {"name": "1", "P": p1, "T": t1, "h": cpa*t1k, "s": ent_air(t1k, p1), "v": 0.287*t1k/(p1*100)},
-    ]
+    # Points instantiation
+    p1 = GasPoint("1", t1, p1, cpa, ka)
+    p2 = GasPoint("2 (iso)", t2sk-273.15, p2, cpa, ka, h_ref=p1.h, s_ref=p1.s, T_ref_C=t1, P_ref_bar=p1.P_bar)
+    p2r = GasPoint("2'", t2rk-273.15, p2, cpa, ka, h_ref=p1.h, s_ref=p1.s, T_ref_C=t1, P_ref_bar=p1.P_bar)
+    p3 = GasPoint("3", t3, p2, cpg_esp, kg, h_ref=p2r.h, s_ref=p2r.s, T_ref_C=p2r.T_C, P_ref_bar=p2)
+    p4 = GasPoint("4 (iso)", t4sk-273.15, p4, cpg_esp, kg, h_ref=p3.h, s_ref=p3.s, T_ref_C=t3, P_ref_bar=p2)
+    p4r = GasPoint("4'", t4rk-273.15, p4, cpg_esp, kg, h_ref=p3.h, s_ref=p3.s, T_ref_C=t3, P_ref_bar=p2)
+
+    pts_real = [p1, p2r, p3, p4r, p1]
+    pts_ideal = [p1, p2, p3, p4, p1]
 
     with col_main:
-        m1, m2, m3 = st.columns(3)
-        m1.metric(t["net_work"], f"{p_e_netta/1000:.2f} MW")
-        m2.metric(t["efficiency"], f"{eta_te:.2f} %")
-        m3.metric(t["bwr"], f"{bwr:.1f} %")
+        render_metric_row({
+            t["net_work"]: f"{p_e_netta/1000:.2f} MW",
+            t["efficiency"]: f"{eta_te:.2f} %",
+            t["bwr"]: f"{bwr:.1f} %",
+            "Cons. Spec.": f"{cons_spec/1000:.3f} kg/MWh"
+        })
         
         tab_flow, tab_ts, tab_pv, tab_hs = st.tabs(["Schema Impianto", "T-s Diagram", "P-v Diagram", "Analysis Report"])
         
         with tab_flow:
-            st.pyplot(draw_brayton_schema(pts[0], pts[1], pts[2], pts[3]))
+            st.pyplot(draw_brayton_schema(pts_real[0].to_dict(), pts_real[1].to_dict(), pts_real[2].to_dict(), pts_real[3].to_dict()))
         
         with tab_ts:
-            fig = plotly_base("Diagramma Termodinamico T-s", "s (kJ/kgK)", "T (°C)")
-            add_generic_points(fig, pts, "s", "T", "Ciclo Reale", THEME["orange"])
+            fig = plotly_base("Diagramma T-s (Gas Reale)", "s (kJ/kgK)", "T (°C)", THEME)
+            # Add Real Path (Curves)
+            for pa, pb in zip(pts_real[:-1], pts_real[1:]):
+                path = get_polytropic_path(pa, pb)
+                add_line(fig, [p["s"] for p in path], [p["T"] for p in path], "Reale", THEME["orange"], width=3)
+            # Add Ideal Path (Dashed Curves)
+            for pa, pb in zip(pts_ideal[:-1], pts_ideal[1:]):
+                path = get_polytropic_path(pa, pb)
+                add_line(fig, [p["s"] for p in path], [p["T"] for p in path], "Ideale", THEME["gray"], dash="dash", width=1)
+            
+            add_generic_points(fig, [p.to_dict() for p in pts_real[:-1]], "s", "T", "Punti", THEME["gold"])
             st.plotly_chart(fig, use_container_width=True)
             
         with tab_pv:
-            fig = plotly_base("Diagramma Termodinamico P-v", "v (m³/kg)", "P (bar)", xlog=True)
-            add_generic_points(fig, pts, "v", "P", "Ciclo Reale", THEME["cyan"])
+            fig = plotly_base("Diagramma P-v (Gas Reale)", "v (m³/kg)", "P (bar)", THEME, xlog=True)
+            # Add Real Path
+            for pa, pb in zip(pts_real[:-1], pts_real[1:]):
+                path = get_polytropic_path(pa, pb)
+                add_line(fig, [p["v"] for p in path], [p["P"] for p in path], "Reale", THEME["cyan"], width=3)
+            
+            add_generic_points(fig, [p.to_dict() for p in pts_real[:-1]], "v", "P", "Punti", THEME["cyan"])
             st.plotly_chart(fig, use_container_width=True)
 
         with tab_hs:
@@ -681,7 +525,6 @@ elif "Brayton" in ciclo:
 -- A. COMPRESSIONE -----------------------------------------
    T2 ideale:    {t2sk-273.15:>8.2f} °C
    T2 reale:     {t2rk-273.15:>8.2f} °C
-   Lav. isent.:  {l_tc:>8.2f} kJ/kg
    Lav. interno: {l_ic:>8.2f} kJ/kg
    Potenza asse: {p_ac/1000:>8.3f} MW
 
@@ -700,7 +543,7 @@ elif "Brayton" in ciclo:
    POT. NETTA:   {p_e_netta/1000:>8.3f} MW
    REND. EFF.:   {eta_te:>8.2f} %
    BWR:          {bwr:>8.2f} %
-   CONS. SPEC.:  {cons_spec:>8.4f} kg/kWh
+   CONS. SPEC.:  {cons_spec/1000:>8.4f} kg/MWh
 ════════════════════════════════════════════════════════════
             """
             st.markdown(f'<pre class="cad-report">{rep}</pre>', unsafe_allow_html=True)
@@ -708,6 +551,7 @@ elif "Brayton" in ciclo:
 
 
 
+# --- OTTO CYCLE ---
 elif "Otto" in ciclo:
     st.header("⚙️ Otto Cycle Engine CAD")
     col_in, col_main = st.columns([1, 2.5], gap="large")
@@ -723,6 +567,7 @@ elif "Otto" in ciclo:
         eta = st.number_input("η isentropic", value=0.85)
 
     rg = cv * (k - 1)
+    cp = cv * k
     t1k, t3k = t1 + 273.15, t3 + 273.15
     v1 = rg * t1k / (p1 * 100)
     v2 = v1 / r
@@ -734,40 +579,53 @@ elif "Otto" in ciclo:
     t4k = t3k - eta * (t3k - t4sk)
     p4 = p3 * (t4k / t3k) * (v2 / v1)
 
-    pts = [
-        {"name": "1", "P": p1, "T": t1, "h": cv*t1k, "s": cv*np.log(t1k/273.15), "v": v1},
-        {"name": "2", "P": p2, "T": t2k-273.15, "h": cv*t2k, "s": cv*np.log(t2k/273.15)+rg*np.log(v2/v1), "v": v2},
-        {"name": "3", "P": p3, "T": t3, "h": cv*t3k, "s": cv*np.log(t3k/273.15)+rg*np.log(v2/v1), "v": v2},
-        {"name": "4", "P": p4, "T": t4k-273.15, "h": cv*t4k, "s": cv*np.log(t4k/273.15), "v": v1},
-        {"name": "1", "P": p1, "T": t1, "h": cv*t1k, "s": cv*np.log(t1k/273.15), "v": v1},
-    ]
+    # Modular Points
+    ref = {"T_ref_C": t1, "P_ref_bar": p1}
+    p1_g = GasPoint("1", t1, p1, cp, k, R=rg)
+    p2_g = GasPoint("2", t2k-273.15, p2, cp, k, R=rg, **ref)
+    p3_g = GasPoint("3", t3, p3, cp, k, R=rg, **ref)
+    p4_g = GasPoint("4", t4k-273.15, p4, cp, k, R=rg, **ref)
+    pts = [p1_g, p2_g, p3_g, p4_g, p1_g]
+
     q_in = cv * (t3k - t2k)
     q_out = cv * (t4k - t1k)
     w_net = q_in - q_out
     eta_cycle = 100.0 * w_net / q_in if q_in > 0 else 0
 
     with col_main:
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Lavoro Netto", f"{w_net:.1f} kJ/kg")
-        m2.metric("Rendimento", f"{eta_cycle:.2f} %")
-        m3.metric("Pressione Max", f"{p3:.2f} bar")
+        render_metric_row({
+            "Lavoro Netto": f"{w_net:.1f} kJ/kg",
+            "Rendimento": f"{eta_cycle:.2f} %",
+            "Pressione Max": f"{p3:.2f} bar"
+        })
         
         tab_flow, tab_pv, tab_ts, tab_rep = st.tabs(["Schema Motore", "P-v Diagram", "T-s Diagram", "Analysis Report"])
         with tab_flow: st.pyplot(draw_otto_diesel_schema(False))
         with tab_pv:
-            fig = plotly_base("Diagramma P-v", "v (m³/kg)", "P (bar)")
-            add_line(fig, np.linspace(v2, v1, 60), p1 * (v1 / np.linspace(v2, v1, 60)) ** k, "Isentropica", THEME["gray"], dash="dash")
-            add_generic_points(fig, pts, "v", "P", "Ciclo Otto", THEME["cyan"])
+            fig = plotly_base("Diagramma P-v (Otto)", "v (m³/kg)", "P (bar)", THEME)
+            for pa, pb in zip(pts[:-1], pts[1:]):
+                path = get_polytropic_path(pa, pb)
+                add_line(fig, [p["v"] for p in path], [p["P"] for p in path], "Ciclo", THEME["cyan"])
             st.plotly_chart(fig, use_container_width=True)
+            
+        with tab_ts:
+            fig = plotly_base("Diagramma T-s (Otto)", "s (kJ/kgK)", "T (°C)", THEME)
+            for pa, pb in zip(pts[:-1], pts[1:]):
+                path = get_polytropic_path(pa, pb)
+                add_line(fig, [p["s"] for p in path], [p["T"] for p in path], "Ciclo", THEME["gold"])
+            st.plotly_chart(fig, use_container_width=True)
+
+        with tab_rep:
             rep = f"PEAK PRESSURE: {p3:>8.2f} bar\nNET WORK:      {w_net:>8.2f} kJ/kg\nEFFICIENCY:    {eta_cycle:>8.2f} %"
             st.markdown(f'<pre class="cad-report">{rep}</pre>', unsafe_allow_html=True)
-            download_report_btn("Ciclo_Otto", rep, pd.DataFrame(pts), "pdf_o")
+            download_report_btn("Ciclo_Otto", rep, pd.DataFrame([p.to_dict() for p in pts[:-1]]), "pdf_o")
 
-
+# --- DIESEL CYCLE ---
 elif "Diesel" in ciclo:
     st.header("🛢️ Diesel Cycle Engine CAD")
     col_in, col_main = st.columns([1, 2.5], gap="large")
     with col_in:
+        st.subheader(t["inputs"])
         p1 = st.number_input("P1 Intake (bar)", value=1.0)
         t1 = st.number_input("T1 Intake (°C)", value=25.0)
         r = st.number_input("Compression Ratio r", value=18.0)
@@ -791,35 +649,48 @@ elif "Diesel" in ciclo:
     t4k = t3k - eta * (t3k - t4sk)
     p4 = p3 * (t4k / t3k) * (v3 / v1)
 
-    pts = [
-        {"name": "1", "P": p1, "T": t1, "h": cp*t1k, "s": cv*np.log(t1k/273.15), "v": v1},
-        {"name": "2", "P": p2, "T": t2k-273.15, "h": cp*t2k, "s": cv*np.log(t2k/273.15)+rg*np.log(v2/v1), "v": v2},
-        {"name": "3", "P": p3, "T": t3k-273.15, "h": cp*t3k, "s": cv*np.log(t3k/273.15)+rg*np.log(v3/v1), "v": v3},
-        {"name": "4", "P": p4, "T": t4k-273.15, "h": cp*t4k, "s": cv*np.log(t4k/273.15), "v": v1},
-        {"name": "1", "P": p1, "T": t1, "h": cp*t1k, "s": cv*np.log(t1k/273.15), "v": v1},
-    ]
+    # Modular Points
+    ref = {"T_ref_C": t1, "P_ref_bar": p1}
+    p1_g = GasPoint("1", t1, p1, cp, k, R=rg)
+    p2_g = GasPoint("2", t2k-273.15, p2, cp, k, R=rg, **ref)
+    p3_g = GasPoint("3", t3k-273.15, p3, cp, k, R=rg, **ref)
+    p4_g = GasPoint("4", t4k-273.15, p4, cp, k, R=rg, **ref)
+    pts = [p1_g, p2_g, p3_g, p4_g, p1_g]
+
     q_in = cp * (t3k - t2k)
     q_out = cv * (t4k - t1k)
     w_net = q_in - q_out
     eta_cycle = 100.0 * w_net / q_in if q_in > 0 else 0
 
     with col_main:
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Lavoro Netto", f"{w_net:.1f} kJ/kg")
-        m2.metric("Rendimento", f"{eta_cycle:.2f} %")
-        m3.metric("Pressione Max", f"{p3:.2f} bar")
+        render_metric_row({
+            "Lavoro Netto": f"{w_net:.1f} kJ/kg",
+            "Rendimento": f"{eta_cycle:.2f} %",
+            "Pressione Max": f"{p3:.2f} bar"
+        })
+        
         tab_flow, tab_pv, tab_ts, tab_rep = st.tabs(["Schema Motore", "P-v Diagram", "T-s Diagram", "Analysis Report"])
         with tab_flow: st.pyplot(draw_otto_diesel_schema(True))
         with tab_pv:
-            fig = plotly_base("Diagramma P-v", "v (m³/kg)", "P (bar)")
-            add_generic_points(fig, pts, "v", "P", "Ciclo Diesel", THEME["cyan"])
+            fig = plotly_base("Diagramma P-v (Diesel)", "v (m³/kg)", "P (bar)", THEME)
+            for pa, pb in zip(pts[:-1], pts[1:]):
+                path = get_polytropic_path(pa, pb)
+                add_line(fig, [p["v"] for p in path], [p["P"] for p in path], "Ciclo", THEME["cyan"])
             st.plotly_chart(fig, use_container_width=True)
+            
+        with tab_ts:
+            fig = plotly_base("Diagramma T-s (Diesel)", "s (kJ/kgK)", "T (°C)", THEME)
+            for pa, pb in zip(pts[:-1], pts[1:]):
+                path = get_polytropic_path(pa, pb)
+                add_line(fig, [p["s"] for p in path], [p["T"] for p in path], "Ciclo", THEME["gold"])
+            st.plotly_chart(fig, use_container_width=True)
+
         with tab_rep:
             rep = f"PEAK PRESSURE: {p3:>8.2f} bar\nNET WORK:      {w_net:>8.2f} kJ/kg\nEFFICIENCY:    {eta_cycle:>8.2f} %"
             st.markdown(f'<pre class="cad-report">{rep}</pre>', unsafe_allow_html=True)
-            download_report_btn("Ciclo_Diesel", rep, pd.DataFrame(pts), "pdf_d")
+            download_report_btn("Ciclo_Diesel", rep, pd.DataFrame([p.to_dict() for p in pts[:-1]]), "pdf_d")
 
-
+# --- REFRIGERATION CYCLE ---
 elif "Frigorifero" in ciclo:
     st.header("❄️ Refrigeration Cycle CAD")
     col_in, col_main = st.columns([1, 2.5], gap="large")
@@ -829,36 +700,43 @@ elif "Frigorifero" in ciclo:
         eta_c = st.number_input("η compressor", value=0.82)
         m_dot = st.number_input("Mass flow (kg/s)", value=0.5)
 
-    pe, pc = 10**((te+100)/70), 10**((tc+100)/70)
-    h1 = 404 + te*0.5
-    h2s = h1 + (h1-200)*0.5*(pc/pe-1)
-    h2 = h1 + (h2s-h1)/eta_c
-    h3 = 200 + tc*1.2
-    h4 = h3
+    # Simplified Refrigerant Model (Property approximations for R134a)
+    pe = 10**((te+100)/70); pc = 10**((tc+100)/70)
+    h1 = 400 + te*0.6; s1 = 1.7 + te*0.005
+    h2s = h1 * (pc/pe)**0.15
+    h2 = h1 + (h2s-h1)/eta_c; s2 = s1 + (h2-h1)/(tc+273)
+    h3 = 200 + tc*1.2; s3 = 1.0 + tc*0.004
+    h4 = h3; s4 = s3 + (h3-h1)/(te+273) # Approximation
+    
     qe, wc = h1-h4, h2-h1
     cop = qe/wc if wc>0 else 0
     pts = [
-        {"name": "1", "P": pe, "T": te, "h": h1, "s": 1.7+te*0.005, "v": 0},
-        {"name": "2", "P": pc, "T": tc+30, "h": h2, "s": 1.75+tc*0.005, "v": 0},
-        {"name": "3", "P": pc, "T": tc, "h": h3, "s": 1.0+tc*0.004, "v": 0},
-        {"name": "4", "P": pe, "T": te, "h": h4, "s": 1.05+te*0.004, "v": 0},
-        {"name": "1", "P": pe, "T": te, "h": h1, "s": 1.7+te*0.005, "v": 0},
+        {"name": "1", "P": pe, "T": te, "h": h1, "s": s1, "v": 0.05/pe},
+        {"name": "2", "P": pc, "T": tc+30, "h": h2, "s": s2, "v": 0.05/pc},
+        {"name": "3", "P": pc, "T": tc, "h": h3, "s": s3, "v": 0.001},
+        {"name": "4", "P": pe, "T": te, "h": h4, "s": s4, "v": 0.01/pe},
+        {"name": "1", "P": pe, "T": te, "h": h1, "s": s1, "v": 0.05/pe},
     ]
 
     with col_main:
-        m1, m2, m3 = st.columns(3)
-        m1.metric("COP Freddo", f"{cop:.2f}")
-        m2.metric("Pot. Frigo", f"{qe*m_dot:.1f} kW")
-        m3.metric("Pot. Compr.", f"{wc*m_dot:.1f} kW")
+        render_metric_row({
+            "COP Freddo": f"{cop:.2f}",
+            "Pot. Frigo": f"{qe*m_dot:.1f} kW",
+            "Pot. Compr.": f"{wc*m_dot:.1f} kW"
+        })
         tab_ph, tab_ts, tab_rep = st.tabs(["P-h Diagram", "T-s Diagram", "Analysis Report"])
         with tab_ph:
-            fig = plotly_base("Diagramma P-h", "h (kJ/kg)", "P (bar)", ylog=True)
+            fig = plotly_base("Diagramma P-h (R134a approx)", "h (kJ/kg)", "P (bar)", THEME, ylog=True)
             add_generic_points(fig, pts, "h", "P", "Ciclo Frigo", THEME["cyan"])
+            st.plotly_chart(fig, use_container_width=True)
+        with tab_ts:
+            fig = plotly_base("Diagramma T-s (R134a approx)", "s (kJ/kgK)", "T (°C)", THEME)
+            add_generic_points(fig, pts, "s", "T", "Ciclo Frigo", THEME["gold"])
             st.plotly_chart(fig, use_container_width=True)
         with tab_rep:
             rep = f"COP REFRIG:  {cop:>8.2f}\nQ_EVAP:       {qe*m_dot:>8.2f} kW\nW_COMP:       {wc*m_dot:>8.2f} kW"
             st.markdown(f'<pre class="cad-report">{rep}</pre>', unsafe_allow_html=True)
-            download_report_btn("Ciclo_Frigorifero", rep, pd.DataFrame(pts), "pdf_f")
+            download_report_btn("Ciclo_Frigorifero", rep, pd.DataFrame(pts[:-1]), "pdf_f")
 
 
 
