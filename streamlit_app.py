@@ -26,11 +26,16 @@ def create_pdf_report(cycle_name, report_text, points_df, fig_ts):
         # Page 2: State Point Table
         fig_tab, ax_tab = plt.subplots(figsize=(8.27, 4))
         ax_tab.axis('off')
-        the_table = ax_tab.table(cellText=points_df.values, colLabels=points_df.columns, 
-                                 loc='center', cellLoc='center')
-        the_table.auto_set_font_size(False)
-        the_table.set_fontsize(8)
-        the_table.scale(1.2, 1.2)
+        if not points_df.empty:
+            the_table = ax_tab.table(cellText=points_df.values, colLabels=points_df.columns, 
+                                     loc='center', cellLoc='center')
+            the_table.auto_set_font_size(False)
+            the_table.set_fontsize(8)
+            the_table.scale(1.2, 1.2)
+        else:
+            ax_tab.text(0.5, 0.5, "Nessun punto di stato definito / No state points defined", 
+                        ha='center', va='center', fontsize=10, color='gray')
+            
         plt.title("State Point Table", fontsize=12, fontweight='bold')
         pdf.savefig(fig_tab)
         plt.close(fig_tab)
@@ -52,17 +57,17 @@ from streamlit_javascript import st_javascript
 st.set_page_config(page_title="TermoWeb UI", page_icon="⚡", layout="wide")
 
 THEME = {
-    "bg": "#0d141b",
-    "panel": "#10202c",
-    "grid": "rgba(184, 219, 237, 0.14)",
-    "text": "#e7f6ff",
-    "cyan": "#50c8e8",
-    "gold": "#ffd166",
-    "orange": "#ff9f43",
-    "red": "#ff6b6b",
-    "blue": "#74c0fc",
-    "green": "#4dd4ac",
-    "gray": "#9aa7b2",
+    "bg": "#ffffff",
+    "panel": "#f0f7ff",
+    "grid": "rgba(13, 59, 102, 0.1)",
+    "text": "#0d1c29",
+    "cyan": "#00509d",
+    "gold": "#f4a261",
+    "orange": "#e76f51",
+    "red": "#d62828",
+    "blue": "#0077b6",
+    "green": "#2a9d8f",
+    "gray": "#6c757d",
 }
 
 st.markdown(
@@ -73,82 +78,72 @@ st.markdown(
     .block-container { padding-top: 1rem; padding-bottom: 2rem; max-width: 1550px; }
     
     .stApp {
-        background: 
-            radial-gradient(circle at 2% 2%, rgba(80, 200, 232, 0.12), transparent 25%),
-            radial-gradient(circle at 98% 98%, rgba(255, 159, 67, 0.08), transparent 25%),
-            linear-gradient(180deg, #050b10 0%, #0a141d 100%);
-        color: #e2f2ff;
+        background: #ffffff;
+        color: #0d1c29;
         font-family: 'Inter', sans-serif;
     }
 
     /* Glassmorphism Panels */
     .hero {
-        margin-bottom: 1.5rem; padding: 1.8rem 2.2rem;
-        border-radius: 24px; 
-        background: linear-gradient(135deg, rgba(13, 28, 41, 0.92), rgba(18, 52, 77, 0.85));
-        border: 1px solid rgba(80, 200, 232, 0.25);
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(10px);
+        margin-bottom: 2rem; padding: 2rem 2.5rem;
+        border-radius: 20px; 
+        background: linear-gradient(135deg, #f0f7ff, #e6eff7);
+        border: 1px solid rgba(13, 59, 102, 0.2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
     }
     .hero h1 { 
         margin: 0; 
-        background: linear-gradient(90deg, #8ae8ff, #ffffff);
+        background: linear-gradient(90deg, #0d3b66, #00509d);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.8rem; font-weight: 700; line-height: 1.1; 
+        font-size: 3rem; font-weight: 700; line-height: 1.1; 
     }
-    .hero p { margin: 0.8rem 0 0 0; color: #b0d4e3; font-size: 1.1rem; }
-    .authorline { font-size: 0.9rem; opacity: 0.8; margin-top: 0.5rem; color: #50c8e8; }
+    .hero p { margin: 1rem 0 0 0; color: #0d3b66; font-size: 1.2rem; }
+    .authorline { font-size: 0.9rem; opacity: 0.8; margin-top: 0.8rem; color: #0077b6; }
 
     /* CAD Report Style */
     .cad-report {
         font-family: 'JetBrains Mono', 'Consolas', monospace;
-        background: #060c12;
-        border: 1px solid rgba(80, 200, 232, 0.15);
-        border-radius: 12px;
-        padding: 1.2rem;
-        color: #92e1ff;
-        line-height: 1.5;
-        font-size: 0.88rem;
-        overflow-x: auto;
+        background: #f8fbff;
+        border: 1px solid #0d3b66;
+        border-radius: 10px;
+        padding: 1.5rem;
+        color: #0d3b66;
+        line-height: 1.6;
+        font-size: 0.9rem;
     }
 
     /* Metrics Styling */
     div[data-testid="stMetric"] {
-        background: rgba(16, 32, 46, 0.6);
-        border: 1px solid rgba(80, 200, 232, 0.2);
-        border-radius: 16px; padding: 0.8rem;
-        backdrop-filter: blur(5px);
-        transition: transform 0.2s ease;
+        background: #ffffff;
+        border: 1px solid rgba(13, 59, 102, 0.15);
+        border-radius: 12px; padding: 1rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
-    div[data-testid="stMetric"]:hover { transform: translateY(-2px); border-color: rgba(80, 200, 232, 0.4); }
 
     /* Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] { gap: 0.5rem; background: transparent; }
+    .stTabs [data-baseweb="tab-list"] { gap: 1rem; }
     .stTabs [data-baseweb="tab"] {
-        border-radius: 10px 10px 0 0;
-        background: rgba(13, 28, 41, 0.5);
-        border: 1px solid rgba(80, 200, 232, 0.1);
-        padding: 0.5rem 1.2rem;
-        color: #9aa7b2;
+        background: #f0f4f8;
+        border: 1px solid #d1d9e0;
+        color: #4a5568;
     }
     .stTabs [aria-selected="true"] {
-        background: rgba(80, 200, 232, 0.15) !important;
-        border-color: #50c8e8 !important;
+        background: #0d3b66 !important;
         color: #ffffff !important;
     }
 
     /* Input Fields */
     .stNumberInput input, .stTextInput input {
-        background: rgba(7, 18, 27, 0.8) !important;
-        border: 1px solid rgba(80, 200, 232, 0.2) !important;
-        color: white !important;
+        background: #ffffff !important;
+        border: 1px solid #ccd6e0 !important;
+        color: #0d1c29 !important;
     }
     
     /* Sidebar */
     section[data-testid="stSidebar"] {
-        background-color: #071018;
-        border-right: 1px solid rgba(80, 200, 232, 0.1);
+        background-color: #f8fafc;
+        border-right: 1px solid #e2e8f0;
     }
     </style>
     """,
@@ -300,8 +295,8 @@ def plotly_base(title, x_title, y_title, xlog=False, ylog=False, height=460):
         plot_bgcolor=THEME["panel"],
         font=dict(color=THEME["text"]),
         margin=dict(l=20, r=20, t=52, b=20),
-        legend=dict(bgcolor="rgba(6, 19, 27, 0.78)", bordercolor="rgba(80, 200, 232, 0.18)", borderwidth=1),
-        hoverlabel=dict(bgcolor="#06131b", bordercolor=THEME["cyan"], font=dict(color=THEME["text"])),
+        legend=dict(bgcolor="rgba(255, 255, 255, 0.9)", bordercolor=THEME["cyan"], borderwidth=1),
+        hoverlabel=dict(bgcolor="#ffffff", bordercolor=THEME["cyan"], font=dict(color=THEME["text"])),
     )
     fig.update_xaxes(title=x_title, showgrid=True, gridcolor=THEME["grid"], zeroline=False, type="log" if xlog else "linear")
     fig.update_yaxes(title=y_title, showgrid=True, gridcolor=THEME["grid"], zeroline=False, type="log" if ylog else "linear")
@@ -323,7 +318,7 @@ def add_steam_points(fig, points, x_key, y_key, name, color):
             text=[p["name"] for p in points],
             textposition="top center",
             line=dict(color=color, width=3),
-            marker=dict(size=10, color=color, line=dict(color="#17303b", width=2)),
+            marker=dict(size=10, color=color, line=dict(color="#ffffff", width=2)),
             customdata=customdata,
             hovertemplate="<b>%{customdata[0]}</b><br>P = %{customdata[1]:.3f} bar<br>T = %{customdata[2]:.2f} °C<br>h = %{customdata[3]:.2f} kJ/kg<br>s = %{customdata[4]:.4f} kJ/kgK<br>v = %{customdata[5]:.5e} m³/kg<br>x = %{customdata[6]}<extra></extra>",
         )
@@ -341,7 +336,7 @@ def add_generic_points(fig, points, x_key, y_key, name, color):
             text=[p["name"] for p in points],
             textposition="top center",
             line=dict(color=color, width=3),
-            marker=dict(size=10, color=color, line=dict(color="#17303b", width=2)),
+            marker=dict(size=10, color=color, line=dict(color="#ffffff", width=2)),
             customdata=customdata,
             hovertemplate="<b>%{customdata[0]}</b><br>P = %{customdata[1]:.3f} bar<br>T = %{customdata[2]:.2f} °C<br>h = %{customdata[3]:.2f} kJ/kg<br>s = %{customdata[4]:.4f} kJ/kgK<br>v = %{customdata[5]:.5e} m³/kg<extra></extra>",
         )
@@ -356,7 +351,7 @@ def add_steam_dome(fig, x_key, y_key):
 
 def draw_rankine_schema(p1, p2, p3, p4):
     fig_s, ax = plt.subplots(figsize=(6, 5))
-    ax.set_facecolor("#10202c"); ax.axis("off"); ax.set_xlim(0, 10.5); ax.set_ylim(-2, 11)
+    ax.set_facecolor("#ffffff"); ax.axis("off"); ax.set_xlim(0, 10.5); ax.set_ylim(-2, 11)
     ax.add_patch(patches.Rectangle((1.5, 3.5), 2.5, 4.5, fill=True, color="#2c1e1e", ec=THEME["red"], lw=2))
     ax.add_patch(patches.Polygon([(6.5, 7.5), (7.8, 6.8), (7.8, 4.2), (6.5, 3.5)], fill=True, color="#2f2214", ec=THEME["orange"], lw=2))
     ax.add_patch(patches.Circle((7.15, 1.5), 0.8, fill=True, color="#1a2433", ec=THEME["blue"], lw=2))
@@ -370,34 +365,33 @@ def draw_rankine_schema(p1, p2, p3, p4):
     ax.plot([7.15, 7.15], [5.5, 2.3], color=THEME["orange"], lw=2)
     ax.plot([6.35, 4.5, 4.5, 4.0], [1.5, 1.5, 0.5, 0.5], color=THEME["blue"], lw=2)
     for x, y, lbl, p in [(4.5, 0.5, "1", p1), (2.75, 2.0, "2", p2), (4.5, 9.7, "3", p3), (7.3, 3.5, "4", p4)]:
-        ax.text(x, y, f"[{lbl}]\\nP:{p.P*10:.2f} bar\\nT:{p.T-273.15:.1f} °C", color="white", fontsize=7, bbox=dict(boxstyle="round,pad=0.2", fc="#10202c", ec="white", alpha=0.7))
+        ax.text(x, y, f"[{lbl}]\\nP:{p.P*10:.2f} bar\\nT:{p.T-273.15:.1f} °C", color=THEME["text"], fontsize=7, bbox=dict(boxstyle="round,pad=0.2", fc="#ffffff", ec=THEME["text"], alpha=0.9))
     return fig_s
 
 
 def draw_brayton_schema(p1, p2, p3, p4):
     fig_s, ax = plt.subplots(figsize=(6, 5))
-    ax.set_facecolor("#10202c"); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-    ax.plot([0.3, 0.9], [0.4, 0.4], color="gray", linewidth=4, zorder=1); ax.text(0.6, 0.35, "Albero", color="white", weight="bold", ha="center", fontsize=9)
+    ax.set_facecolor("#ffffff"); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.plot([0.3, 0.9], [0.4, 0.4], color="#333333", linewidth=4, zorder=1); ax.text(0.6, 0.35, "Albero", color=THEME["text"], weight="bold", ha="center", fontsize=9)
     ax.plot([0.35, 0.35, 0.45], [0.5, 0.8, 0.8], color="#555555", linewidth=10, zorder=1); ax.plot([0.55, 0.65, 0.65], [0.8, 0.8, 0.5], color="#555555", linewidth=10, zorder=1)
     ax.add_patch(patches.Polygon([[0.2, 0.3], [0.2, 0.7], [0.4, 0.6], [0.4, 0.4]], closed=True, color="#2196F3", zorder=2))
     ax.add_patch(patches.Polygon([[0.6, 0.4], [0.6, 0.6], [0.8, 0.7], [0.8, 0.3]], closed=True, color="#4CAF50", zorder=2))
     ax.add_patch(patches.Rectangle((0.4, 0.7), 0.2, 0.2, color="#FFCA28", zorder=2))
-    ax.text(0.3, 0.5, "Compressore", color="white", weight="bold", ha="center", va="center", rotation=90, fontsize=8)
-    ax.text(0.7, 0.5, "Turbina", color="white", weight="bold", ha="center", va="center", rotation=-90, fontsize=8)
+    ax.text(0.3, 0.5, "Compressore", color="#222222", weight="bold", ha="center", va="center", rotation=90, fontsize=8)
+    ax.text(0.7, 0.5, "Turbina", color="#222222", weight="bold", ha="center", va="center", rotation=-90, fontsize=8)
     ax.text(0.5, 0.8, "Combustore", color="black", weight="bold", ha="center", va="center", fontsize=8)
     for x, y, lbl, p in [(0.1, 0.5, "1", p1), (0.35, 0.9, "2", p2), (0.65, 0.9, "3", p3), (0.9, 0.5, "4", p4)]:
-        ax.text(x, y, f"{lbl}\\nP:{p['P']:.1f} bar\\nT:{p['T']:.0f} °C", color="white", fontsize=7, bbox=dict(boxstyle="round,pad=0.2", fc="#10202c", ec="white", alpha=0.7))
+        ax.text(x, y, f"{lbl}\\nP:{p['P']:.1f} bar\\nT:{p['T']:.0f} °C", color=THEME["text"], fontsize=7, bbox=dict(boxstyle="round,pad=0.2", fc="#ffffff", ec=THEME["text"], alpha=0.9))
     return fig_s
 
 
 def draw_otto_diesel_schema(is_diesel=False):
     fig_s, ax = plt.subplots(figsize=(6, 4))
-    ax.set_facecolor("#10202c"); ax.axis("off")
-    ax.add_patch(patches.Rectangle((0.3, 0.2), 0.4, 0.6, fill=False, color="white", lw=3))
+    ax.add_patch(patches.Rectangle((0.3, 0.2), 0.4, 0.6, fill=False, color=THEME["text"], lw=3))
     piston_y = 0.3 if is_diesel else 0.4
     ax.add_patch(patches.Rectangle((0.3, piston_y), 0.4, 0.1, color="gray"))
     ax.plot([0.5, 0.5], [piston_y, 0.05], color="gray", lw=5)
-    ax.text(0.5, 0.9, "Diesel" if is_diesel else "Otto", color="white", ha="center", weight="bold")
+    ax.text(0.5, 0.9, "Diesel" if is_diesel else "Otto", color=THEME["text"], ha="center", weight="bold")
     return fig_s
 
 
