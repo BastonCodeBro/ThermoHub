@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { solveFluid } from '../utils/waterProps';
+import { generateProcessPath } from '../utils/processPath';
 import { Zap } from 'lucide-react';
 import CyclePageLayout from './shared/CyclePageLayout';
 import InputField from './shared/InputField';
@@ -44,54 +45,59 @@ const OttoPage = () => {
     if (!results || activeTab > 2) return;
     if (!node) return;
     const pts = results.allPoints;
+    const fluid = 'Air';
 
-    if (activeTab === 0) {
-      const c12 = genTsCurve(pts[0], pts[1], 'isentropic');
-      const c23 = genTsCurve(pts[1], pts[2], 'isochoric');
-      const c34 = genTsCurve(pts[2], pts[3], 'isentropic');
-      const c41 = genTsCurve(pts[3], pts[0], 'isochoric');
-      const data = [
-        addTrace(c12.x, c12.y, { color: COLOR, width: 3, mode: 'lines' }),
-        addTrace(c23.x, c23.y, { color: '#EF4444', width: 3, mode: 'lines' }),
-        addTrace(c34.x, c34.y, { color: '#22D3EE', width: 3, mode: 'lines' }),
-        addTrace(c41.x, c41.y, { color: '#60A5FA', width: 3, mode: 'lines' }),
-        addTrace(pts.map(p => p.s), pts.map(p => p.t), { color: COLOR, mode: 'markers', markerSize: 10 }),
-      ];
-      const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
-      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
-        ['1\nAspiraz.', '2\nCompr.', '3\nCombust.', '4\nEspans.'], COLOR);
-      renderPlot(node, data, layout, plotConfig);
-    } else if (activeTab === 1) {
-      const c12 = genPvCurve(pts[0], pts[1], 'isentropic', 60, K);
-      const c23 = genPvCurve(pts[1], pts[2], 'isochoric', 60, K);
-      const c34 = genPvCurve(pts[2], pts[3], 'isentropic', 60, K);
-      const c41 = genPvCurve(pts[3], pts[0], 'isochoric', 60, K);
-      const data = [
-        addTrace(c12.x, c12.y, { color: '#FBBF24', width: 3, mode: 'lines' }),
-        addTrace(c23.x, c23.y, { color: '#EF4444', width: 3, mode: 'lines' }),
-        addTrace(c34.x, c34.y, { color: '#22D3EE', width: 3, mode: 'lines' }),
-        addTrace(c41.x, c41.y, { color: '#60A5FA', width: 3, mode: 'lines' }),
-        addTrace(pts.map(p => p.v), pts.map(p => p.p), { color: '#FBBF24', mode: 'markers', markerSize: 10 }),
-      ];
-      const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
-      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
-      renderPlot(node, data, layout, plotConfig);
-    } else if (activeTab === 2) {
-      const c12 = genHsCurve(pts[0], pts[1], 'isentropic');
-      const c23 = genHsCurve(pts[1], pts[2], 'isochoric');
-      const c34 = genHsCurve(pts[2], pts[3], 'isentropic');
-      const c41 = genHsCurve(pts[3], pts[0], 'isochoric');
-      const data = [
-        addTrace(c12.x, c12.y, { color: COLOR, width: 3, mode: 'lines' }),
-        addTrace(c23.x, c23.y, { color: '#EF4444', width: 3, mode: 'lines' }),
-        addTrace(c34.x, c34.y, { color: '#22D3EE', width: 3, mode: 'lines' }),
-        addTrace(c41.x, c41.y, { color: '#60A5FA', width: 3, mode: 'lines' }),
-        addTrace(pts.map(p => p.s), pts.map(p => p.h), { color: COLOR, mode: 'markers', markerSize: 10 }),
-      ];
-      const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
-      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
-      renderPlot(node, data, layout, plotConfig);
-    }
+    const renderActivePlot = async () => {
+      const paths = await Promise.all([
+        generateProcessPath(pts[0], pts[1], fluid),
+        generateProcessPath(pts[1], pts[2], fluid),
+        generateProcessPath(pts[2], pts[3], fluid),
+        generateProcessPath(pts[3], pts[0], fluid),
+      ]);
+
+      if (activeTab === 0) {
+        const data = [
+          ...paths.map((path, i) => addTrace(path.map(p => p.s), path.map(p => p.t), {
+            name: `Tratto ${i + 1}`,
+            color: [COLOR, '#EF4444', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(pts.map(p => p.s), pts.map(p => p.t), { color: COLOR, mode: 'markers', markerSize: 10 }),
+        ];
+        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
+        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
+          ['1\nAspiraz.', '2\nCompr.', '3\nCombust.', '4\nEspans.'], COLOR);
+        renderPlot(node, data, layout, plotConfig);
+      } else if (activeTab === 1) {
+        const data = [
+          ...paths.map((path, i) => addTrace(path.map(p => p.v), path.map(p => p.p), {
+            name: `Tratto ${i + 1}`,
+            color: ['#FBBF24', '#EF4444', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(pts.map(p => p.v), pts.map(p => p.p), { color: '#FBBF24', mode: 'markers', markerSize: 10 }),
+        ];
+        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
+        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
+        renderPlot(node, data, layout, plotConfig);
+      } else if (activeTab === 2) {
+        const data = [
+          ...paths.map((path, i) => addTrace(path.map(p => p.s), path.map(p => p.h), {
+            name: `Tratto ${i + 1}`,
+            color: [COLOR, '#EF4444', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(pts.map(p => p.s), pts.map(p => p.h), { color: COLOR, mode: 'markers', markerSize: 10 }),
+        ];
+        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
+        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
+        renderPlot(node, data, layout, plotConfig);
+      }
+    };
+    renderActivePlot();
     return () => { if (node) cleanupPlot(node); };
   }, [results, activeTab]);
 

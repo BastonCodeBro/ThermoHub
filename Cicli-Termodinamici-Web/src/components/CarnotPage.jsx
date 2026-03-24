@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { solveFluid } from '../utils/waterProps';
+import { generateProcessPath } from '../utils/processPath';
 import { RotateCw } from 'lucide-react';
 import CyclePageLayout from './shared/CyclePageLayout';
 import InputField from './shared/InputField';
@@ -43,55 +45,59 @@ const CarnotPage = () => {
     const node = activeTab === 0 ? tsRef.current : activeTab === 1 ? pvRef.current : activeTab === 2 ? hsRef.current : null;
     if (!results || !node) return;
     const pts = results.allPoints;
-    if (activeTab === 0) {
-      const segments = [
-        genTsCurve(pts[0], pts[1], 'isothermal'),
-        genTsCurve(pts[1], pts[2], 'isentropic'),
-        genTsCurve(pts[2], pts[3], 'isothermal'),
-        genTsCurve(pts[3], pts[0], 'isentropic'),
-      ];
-      const x = segments.flatMap(s => s.x);
-      const y = segments.flatMap(s => s.y);
-      const data = [addTrace(x, y,
-        { name: 'Ciclo Carnot', color: COLOR, mode: 'lines+markers', markerSize: 10 }
-      )];
-      const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
-      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
-        ['1\nIsoT esp.', '2\nAdiab.', '3\nIsoT compr.', '4\nAdiab.'], COLOR);
-      renderPlot(node, data, layout, plotConfig);
-    } else if (activeTab === 1) {
-      const segments = [
-        genPvCurve(pts[0], pts[1], 'isothermal'),
-        genPvCurve(pts[1], pts[2], 'isentropic', 60, K),
-        genPvCurve(pts[2], pts[3], 'isothermal'),
-        genPvCurve(pts[3], pts[0], 'isentropic', 60, K),
-      ];
-      const x = segments.flatMap(s => s.x);
-      const y = segments.flatMap(s => s.y);
-      const data = [addTrace(x, y,
-        { name: 'Ciclo P-v', color: '#C4B5FD', mode: 'lines+markers', markerSize: 10 }
-      )];
-      const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
-      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.v || 0, y: p.p })),
-        ['1', '2', '3', '4'], COLOR);
-      renderPlot(node, data, layout, plotConfig);
-    } else if (activeTab === 2) {
-      const segments = [
-        genHsCurve(pts[0], pts[1], 'isothermal'),
-        genHsCurve(pts[1], pts[2], 'isentropic'),
-        genHsCurve(pts[2], pts[3], 'isothermal'),
-        genHsCurve(pts[3], pts[0], 'isentropic'),
-      ];
-      const x = segments.flatMap(s => s.x);
-      const y = segments.flatMap(s => s.y);
-      const data = [addTrace(x, y,
-        { name: 'Ciclo h-s', color: '#67E8F9', mode: 'lines+markers', markerSize: 10 }
-      )];
-      const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
-      layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.h })),
-        ['1', '2', '3', '4'], COLOR);
-      renderPlot(node, data, layout, plotConfig);
-    }
+    const fluid = 'Air';
+
+    const renderActivePlot = async () => {
+      const paths = await Promise.all([
+        generateProcessPath(pts[0], pts[1], fluid),
+        generateProcessPath(pts[1], pts[2], fluid),
+        generateProcessPath(pts[2], pts[3], fluid),
+        generateProcessPath(pts[3], pts[0], fluid),
+      ]);
+
+      if (activeTab === 0) {
+        const data = [
+          ...paths.map((path, i) => addTrace(path.map(p => p.s), path.map(p => p.t), {
+            name: `Tratto ${i + 1}`,
+            color: [COLOR, '#EF4444', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(pts.map(p => p.s), pts.map(p => p.t), { color: COLOR, mode: 'markers', markerSize: 10 }),
+        ];
+        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
+        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.t })),
+          ['1\nIsoT esp.', '2\nAdiab.', '3\nIsoT compr.', '4\nAdiab.'], COLOR);
+        renderPlot(node, data, layout, plotConfig);
+      } else if (activeTab === 1) {
+        const data = [
+          ...paths.map((path, i) => addTrace(path.map(p => p.v), path.map(p => p.p), {
+            name: `Tratto ${i + 1}`,
+            color: ['#C4B5FD', '#EF4444', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(pts.map(p => p.v), pts.map(p => p.p), { color: '#C4B5FD', mode: 'markers', markerSize: 10 }),
+        ];
+        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
+        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
+        renderPlot(node, data, layout, plotConfig);
+      } else if (activeTab === 2) {
+        const data = [
+          ...paths.map((path, i) => addTrace(path.map(p => p.s), path.map(p => p.h), {
+            name: `Tratto ${i + 1}`,
+            color: ['#67E8F9', '#EF4444', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(pts.map(p => p.s), pts.map(p => p.h), { color: '#67E8F9', mode: 'markers', markerSize: 10 }),
+        ];
+        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
+        layout.annotations = pointAnnotations(pts.map(p => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
+        renderPlot(node, data, layout, plotConfig);
+      }
+    };
+    renderActivePlot();
     return () => cleanupPlot(node);
   }, [results, activeTab]);
 
@@ -99,31 +105,20 @@ const CarnotPage = () => {
     && isFiniteNumber(inputs.p_ref) && isFiniteNumber(inputs.mass_flow)
     && inputs.t_high > inputs.t_low && inputs.p_ref > 0 && inputs.mass_flow > 0;
 
-  const calculate = () => {
+  const calculate = async () => {
     setLoading(true);
     setError(null);
+    const fluid = 'Air';
     try {
+      const st1 = await solveFluid({ p: inputs.p_ref, t: inputs.t_high }, fluid);
+      const ds = 0.5;
+      const st2 = await solveFluid({ t: inputs.t_high, s: st1.s + ds }, fluid);
+      const st3 = await solveFluid({ t: inputs.t_low, s: st2.s }, fluid);
+      const st4 = await solveFluid({ t: inputs.t_low, s: st1.s }, fluid);
+
+      const allPoints = [st1, st2, st3, st4];
       const Th = inputs.t_high + 273.15;
       const Tl = inputs.t_low + 273.15;
-      const P1 = inputs.p_ref;
-      const ds = 0.5;
-      const s1 = 1.0;
-      const s2 = s1 + ds;
-      const P2 = P1 * Math.exp(-ds / R);
-      const P3 = P2 * Math.pow(Tl / Th, K / (K - 1));
-      const P4 = P3 * Math.exp(ds / R);
-      const v1 = R * Th / (P1 * 1e2);
-      const v2 = R * Th / (P2 * 1e2);
-      const v3 = R * Tl / (P3 * 1e2);
-      const v4 = R * Tl / (P4 * 1e2);
-
-      const allPoints = [
-        { s: s1, t: inputs.t_high, h: CP * Th, p: P1, v: v1 },
-        { s: s2, t: inputs.t_high, h: CP * Th, p: P2, v: v2 },
-        { s: s2, t: inputs.t_low, h: CP * Tl, p: P3, v: v3 },
-        { s: s1, t: inputs.t_low, h: CP * Tl, p: P4, v: v4 },
-      ];
-
       const Q_in = Th * ds;
       const Q_out = Tl * ds;
       const W_net = Q_in - Q_out;

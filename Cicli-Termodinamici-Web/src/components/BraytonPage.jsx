@@ -42,27 +42,42 @@ const BraytonPage = () => {
     if (!results || !node) return;
 
     const renderActivePlot = async () => {
+      const [p1, p2, p3, p4] = results.allPoints;
+      const fluid = 'Air';
+
       if (activeTab === 0) {
-        const [p1, p2, p3, p4] = results.allPoints;
-        const seg1 = genTsCurve(p1, p2, 'isentropic');
-        const seg2 = genTsCurve(p2, p3, 'isobaric');
-        const seg3 = genTsCurve(p3, p4, 'isentropic');
-        const seg4 = genTsCurve(p4, p1, 'isobaric');
-        const x = [...seg1.x, ...seg2.x, ...seg3.x, ...seg4.x];
-        const y = [...seg1.y, ...seg2.y, ...seg3.y, ...seg4.y];
+        const paths = await Promise.all([
+          generateProcessPath(p1, p2, fluid),
+          generateProcessPath(p2, p3, fluid),
+          generateProcessPath(p3, p4, fluid),
+          generateProcessPath(p4, p1, fluid),
+        ]);
+        
         const data = [
-          addTrace(x, y, { name: 'Ciclo Brayton', color: COLOR, mode: 'lines+markers', markerSize: 10 }),
+          ...paths.map((path, i) => addTrace(path.map(p => p.s), path.map(p => p.t), {
+            name: `Tratto ${i+1}`,
+            color: [COLOR, '#F97316', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(results.allPoints.map(p => p.s), results.allPoints.map(p => p.t), {
+            name: 'Stati', color: COLOR, mode: 'markers', markerSize: 10
+          }),
         ];
+
         if (results.idealPoints) {
           const [i1, i2, i3, i4] = results.idealPoints;
-          const iseg1 = genTsCurve(i1, i2, 'isentropic');
-          const iseg2 = genTsCurve(i2, i3, 'isobaric');
-          const iseg3 = genTsCurve(i3, i4, 'isentropic');
-          const iseg4 = genTsCurve(i4, i1, 'isobaric');
-          const ix = [...iseg1.x, ...iseg2.x, ...iseg3.x, ...iseg4.x];
-          const iy = [...iseg1.y, ...iseg2.y, ...iseg3.y, ...iseg4.y];
-          data.push(addTrace(ix, iy, { name: 'Ideale', color: '#475569', width: 2, dash: 'dash', mode: 'lines', markerSize: 0 }));
+          const iPaths = await Promise.all([
+            generateProcessPath(i1, i2, fluid),
+            generateProcessPath(i2, i3, fluid),
+            generateProcessPath(i3, i4, fluid),
+            generateProcessPath(i4, i1, fluid),
+          ]);
+          data.push(...iPaths.map(path => addTrace(path.map(p => p.s), path.map(p => p.t), {
+            color: '#475569', width: 2, dash: 'dash', mode: 'lines'
+          })));
         }
+
         const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
         layout.annotations = pointAnnotations(
           results.allPoints.map(p => ({ x: p.s, y: p.t })),
@@ -71,15 +86,22 @@ const BraytonPage = () => {
         );
         renderPlot(node, data, layout, plotConfig);
       } else if (activeTab === 1) {
-        const [p1, p2, p3, p4] = results.allPoints;
-        const seg1 = genPvCurve(p1, p2, 'isentropic', 60, 1.4);
-        const seg2 = genPvCurve(p2, p3, 'isobaric');
-        const seg3 = genPvCurve(p3, p4, 'isentropic', 60, 1.33);
-        const seg4 = genPvCurve(p4, p1, 'isobaric');
-        const x = [...seg1.x, ...seg2.x, ...seg3.x, ...seg4.x];
-        const y = [...seg1.y, ...seg2.y, ...seg3.y, ...seg4.y];
+        const paths = await Promise.all([
+          generateProcessPath(p1, p2, fluid),
+          generateProcessPath(p2, p3, fluid),
+          generateProcessPath(p3, p4, fluid),
+          generateProcessPath(p4, p1, fluid),
+        ]);
         const data = [
-          addTrace(x, y, { name: 'Ciclo P-v', color: '#A78BFA', mode: 'lines+markers', markerSize: 10 }),
+          ...paths.map((path, i) => addTrace(path.map(p => p.v), path.map(p => p.p), {
+            name: `Tratto ${i+1}`,
+            color: ['#A78BFA', '#F97316', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(results.allPoints.map(p => p.v), results.allPoints.map(p => p.p), {
+            name: 'Stati', color: '#A78BFA', mode: 'markers', markerSize: 10
+          }),
         ];
         const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
         layout.annotations = pointAnnotations(
@@ -89,25 +111,34 @@ const BraytonPage = () => {
         );
         renderPlot(node, data, layout, plotConfig);
       } else if (activeTab === 2) {
-        const [p1, p2, p3, p4] = results.allPoints;
-        const seg1 = genHsCurve(p1, p2, 'isentropic');
-        const seg2 = genHsCurve(p2, p3, 'isobaric');
-        const seg3 = genHsCurve(p3, p4, 'isentropic');
-        const seg4 = genHsCurve(p4, p1, 'isobaric');
-        const x = [...seg1.x, ...seg2.x, ...seg3.x, ...seg4.x];
-        const y = [...seg1.y, ...seg2.y, ...seg3.y, ...seg4.y];
+        const paths = await Promise.all([
+          generateProcessPath(p1, p2, fluid),
+          generateProcessPath(p2, p3, fluid),
+          generateProcessPath(p3, p4, fluid),
+          generateProcessPath(p4, p1, fluid),
+        ]);
         const data = [
-          addTrace(x, y, { name: 'Ciclo h-s', color: COLOR, mode: 'lines+markers', markerSize: 10 }),
+          ...paths.map((path, i) => addTrace(path.map(p => p.s), path.map(p => p.h), {
+            name: `Tratto ${i+1}`,
+            color: [COLOR, '#F97316', '#22D3EE', '#60A5FA'][i],
+            width: 3,
+            mode: 'lines',
+          })),
+          addTrace(results.allPoints.map(p => p.s), results.allPoints.map(p => p.h), {
+            name: 'Stati', color: COLOR, mode: 'markers', markerSize: 10
+          }),
         ];
         if (results.idealPoints) {
           const [i1, i2, i3, i4] = results.idealPoints;
-          const iseg1 = genHsCurve(i1, i2, 'isentropic');
-          const iseg2 = genHsCurve(i2, i3, 'isobaric');
-          const iseg3 = genHsCurve(i3, i4, 'isentropic');
-          const iseg4 = genHsCurve(i4, i1, 'isobaric');
-          const ix = [...iseg1.x, ...iseg2.x, ...iseg3.x, ...iseg4.x];
-          const iy = [...iseg1.y, ...iseg2.y, ...iseg3.y, ...iseg4.y];
-          data.push(addTrace(ix, iy, { name: 'Ideale', color: '#475569', width: 2, dash: 'dash', mode: 'lines', markerSize: 0 }));
+          const iPaths = await Promise.all([
+            generateProcessPath(i1, i2, fluid),
+            generateProcessPath(i2, i3, fluid),
+            generateProcessPath(i3, i4, fluid),
+            generateProcessPath(i4, i1, fluid),
+          ]);
+          data.push(...iPaths.map(path => addTrace(path.map(p => p.s), path.map(p => p.h), {
+            color: '#475569', width: 2, dash: 'dash', mode: 'lines'
+          })));
         }
         const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
         layout.annotations = pointAnnotations(
