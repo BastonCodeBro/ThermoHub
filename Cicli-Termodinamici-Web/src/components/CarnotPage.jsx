@@ -111,7 +111,10 @@ const CarnotPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Volume specifico v (m^3/kg)', 'Pressione P (bar)');
+        const layout = plotLayout('Volume specifico v (m^3/kg)', 'Pressione P (bar)', {
+          xaxis: { type: 'log' },
+          yaxis: { type: 'log' },
+        });
         layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
         renderPlot(node, data, layout, plotConfig);
       } else {
