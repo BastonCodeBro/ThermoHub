@@ -305,10 +305,10 @@ const OttoPage = () => {
       <div className="inputs-grid">
         <InputField label="Rapporto di Compressione" value={inputs.r} onChange={(value) => setInputs({ ...inputs, r: value })} accent={COLOR} />
         <InputField label="Pressione Iniziale" value={inputs.p_low} onChange={(value) => setInputs({ ...inputs, p_low: value })} unit="bar" accent={COLOR} />
-        <InputField label="Temperatura Iniziale" value={inputs.t_min} onChange={(value) => setInputs({ ...inputs, t_min: value })} unit="C" accent={COLOR} />
+        <InputField label="Temperatura Iniziale" value={inputs.t_min} onChange={(value) => setInputs({ ...inputs, t_min: value })} unit="°C" accent={COLOR} />
       </div>
       <div className="inputs-row">
-        <InputField label="Temperatura Massima" value={inputs.t_max} onChange={(value) => setInputs({ ...inputs, t_max: value })} unit="C" accent={COLOR} />
+        <InputField label="Temperatura Massima" value={inputs.t_max} onChange={(value) => setInputs({ ...inputs, t_max: value })} unit="°C" accent={COLOR} />
         <InputField label="Rendimento Isentropico" value={inputs.eta_s} onChange={(value) => setInputs({ ...inputs, eta_s: value })} step={0.01} min={0.5} max={1} accent={COLOR} />
       </div>
       <InputField label="Portata Massica" value={inputs.mass_flow} onChange={(value) => setInputs({ ...inputs, mass_flow: value })} unit="kg/s" step={0.1} accent={COLOR} />

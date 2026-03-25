@@ -279,7 +279,7 @@ const DieselPage = () => {
     <div className="stats-row">
       <StatCard label="Rendimento" value={`${results.stats.eta.toFixed(2)}%`} accent color={COLOR} />
       <StatCard label="Lavoro Netto" value={`${(results.stats.q_in - results.stats.q_out).toFixed(1)} kJ/kg`} />
-      <StatCard label="T Massima" value={`${results.allPoints[2].t.toFixed(0)} C`} />
+      <StatCard label="T Massima" value={`${results.allPoints[2].t.toFixed(0)} °C`} />
       <StatCard label="Calore In" value={`${results.stats.q_in.toFixed(1)} kJ/kg`} />
     </div>
   ) : null;
@@ -309,7 +309,7 @@ const DieselPage = () => {
         <InputField label="Pressione Iniziale" value={inputs.p_low} onChange={(value) => setInputs({ ...inputs, p_low: value })} unit="bar" accent={COLOR} />
       </div>
       <div className="inputs-row">
-        <InputField label="Temperatura Iniziale" value={inputs.t_min} onChange={(value) => setInputs({ ...inputs, t_min: value })} unit="C" accent={COLOR} />
+        <InputField label="Temperatura Iniziale" value={inputs.t_min} onChange={(value) => setInputs({ ...inputs, t_min: value })} unit="°C" accent={COLOR} />
         <InputField label="Rendimento Isentropico" value={inputs.eta_s} onChange={(value) => setInputs({ ...inputs, eta_s: value })} step={0.01} min={0.5} max={1} accent={COLOR} />
       </div>
       <InputField label="Portata Massica" value={inputs.mass_flow} onChange={(value) => setInputs({ ...inputs, mass_flow: value })} unit="kg/s" step={0.1} accent={COLOR} />

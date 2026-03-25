@@ -9,13 +9,13 @@ const CARD = '#111827';
 const isFiniteNumber = (value) => Number.isFinite(value);
 const formatValue = (value, digits, unit) => (isFiniteNumber(value) ? `${value.toFixed(digits)} ${unit}` : '-');
 
-const FlowArrow = ({ x1, y1, x2, y2, color = PIPE, width = 3, label, labelX, labelY }) => {
+const FlowArrow = ({ x1, y1, x2, y2, color = PIPE, width = 4, label, labelX, labelY }) => {
   const angle = Math.atan2(y2 - y1, x2 - x1);
-  const arrowLen = 10;
-  const ax1 = x2 - arrowLen * Math.cos(angle - 0.38);
-  const ay1 = y2 - arrowLen * Math.sin(angle - 0.38);
-  const ax2 = x2 - arrowLen * Math.cos(angle + 0.38);
-  const ay2 = y2 - arrowLen * Math.sin(angle + 0.38);
+  const arrowLen = 15;
+  const ax1 = x2 - arrowLen * Math.cos(angle - 0.32);
+  const ay1 = y2 - arrowLen * Math.sin(angle - 0.32);
+  const ax2 = x2 - arrowLen * Math.cos(angle + 0.32);
+  const ay2 = y2 - arrowLen * Math.sin(angle + 0.32);
 
   return (
     <g>
@@ -97,9 +97,12 @@ const Condenser = ({ x, y, color }) => (
 
 const Combustor = ({ x, y, color }) => (
   <g transform={`translate(${x},${y})`}>
-    <rect x="-42" y="-32" width="84" height="64" rx="12" fill="#2B2117" stroke={color} strokeWidth="3" />
-    <path d="M-8,14 C-12,0 -5,-12 0,-4 C4,-14 12,-4 8,14" fill={color} fillOpacity="0.2" stroke={color} strokeWidth="2" />
-    <text y="-48" textAnchor="middle" fill={color} fontSize="12" fontWeight="800">CAMERA DI COMBUSTIONE</text>
+    <rect x="-48" y="-36" width="96" height="72" rx="12" fill="#2B2117" stroke={color} strokeWidth="3" />
+    <path d="M0,20 C-6,14 -14,2 -10,-8 C-8,-14 -3,-20 0,-26 C3,-20 8,-14 10,-8 C14,2 6,14 0,20Z"
+      fill={color} fillOpacity="0.25" stroke={color} strokeWidth="2" strokeLinejoin="round" />
+    <path d="M0,14 C-3,10 -6,2 -4,-4 C-3,-8 0,-12 0,-16 C0,-12 3,-8 4,-4 C6,2 3,10 0,14Z"
+      fill={color} fillOpacity="0.5" />
+    <text y="-52" textAnchor="middle" fill={color} fontSize="12" fontWeight="800">COMBUSTORE</text>
   </g>
 );
 
@@ -139,21 +142,35 @@ const Cylinder = ({ x, y, color, label, topLabel }) => (
   </g>
 );
 
-const PointCard = ({ x, y, width, label, point, color }) => (
-  <g transform={`translate(${x},${y})`}>
-    <rect width={width} height="76" rx="12" fill={CARD} stroke={`${color}99`} strokeWidth="1.5" />
-    <text x="14" y="18" fill={color} fontSize="12" fontWeight="800">{label}</text>
-    <text x="14" y="38" fill={TEXT} fontSize="10" fontWeight="600">
-      {`P ${formatValue(point?.p, 3, 'bar')}   T ${formatValue(point?.t, 2, 'C')}`}
-    </text>
-    <text x="14" y="54" fill={TEXT} fontSize="10" fontWeight="600">
-      {`h ${formatValue(point?.h, 2, 'kJ/kg')}   s ${formatValue(point?.s, 4, 'kJ/kgK')}`}
-    </text>
-    <text x="14" y="70" fill={TEXT} fontSize="10" fontWeight="600">
-      {`v ${formatValue(point?.v, 5, 'm^3/kg')}`}
-    </text>
-  </g>
-);
+const PointCard = ({ x, y, width, label, point, color }) => {
+  const col1 = 14;
+  const col2 = width / 2 + 8;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <rect width={width} height="92" rx="12" fill={CARD} stroke={`${color}99`} strokeWidth="1.5" />
+      <text x={col1} y="18" fill={color} fontSize="12" fontWeight="800">{label}</text>
+      <text x={col1} y="38" fill={TEXT} fontSize="10" fontWeight="600">
+        {`P: ${formatValue(point?.p, 3, 'bar')}`}
+      </text>
+      <text x={col2} y="38" fill={TEXT} fontSize="10" fontWeight="600">
+        {`T: ${formatValue(point?.t, 2, '°C')}`}
+      </text>
+      <text x={col1} y="54" fill={TEXT} fontSize="10" fontWeight="600">
+        {`h: ${formatValue(point?.h, 2, 'kJ/kg')}`}
+      </text>
+      <text x={col2} y="54" fill={TEXT} fontSize="10" fontWeight="600">
+        {`s: ${formatValue(point?.s, 4, 'kJ/(kg·K)')}`}
+      </text>
+      <text x={col1} y="70" fill={TEXT} fontSize="10" fontWeight="600">
+        {`v: ${formatValue(point?.v, 5, 'm³/kg')}`}
+      </text>
+      <text x={col2} y="70" fill={MUTED} fontSize="9" fontWeight="500">
+        {point?.q !== undefined && point?.q >= 0 && point?.q <= 1 ? `x: ${point.q.toFixed(3)}` : ''}
+      </text>
+      <line x1={col1} y1="24" x2={width - 14} y2="24" stroke={`${color}30`} strokeWidth="1" />
+    </g>
+  );
+};
 
 const MetricCard = ({ x, y, width, label, value, color }) => (
   <g transform={`translate(${x},${y})`}>
@@ -219,19 +236,34 @@ const renderBraytonPlant = () => {
   );
 };
 
+const PhaseStep = ({ x, y, num, label, detail, color }) => (
+  <g transform={`translate(${x},${y})`}>
+    <circle r="14" fill={PANEL} stroke={color} strokeWidth="2" />
+    <text y="1" textAnchor="middle" dominantBaseline="middle" fill={color} fontSize="11" fontWeight="800">
+      {num}
+    </text>
+    <text y="24" textAnchor="middle" fill={TEXT} fontSize="9" fontWeight="700">{label}</text>
+    {detail && <text y="36" textAnchor="middle" fill={MUTED} fontSize="8" fontWeight="500">{detail}</text>}
+  </g>
+);
+
 const renderOttoPlant = (color) => (
   <g>
     <Cylinder x={286} y={150} color={color} label="CILINDRO - CICLO OTTO" topLabel="CANDELA" />
-    <FlowArrow x1={176} y1={82} x2={228} y2={82} color="#60A5FA" label="1 -> 2" />
-    <FlowArrow x1={344} y1={82} x2={396} y2={82} color="#F97316" label="2 -> 3" />
-    <FlowArrow x1={360} y1={244} x2={412} y2={244} color="#34D399" label="3 -> 4" />
-    <FlowArrow x1={212} y1={244} x2={160} y2={244} color="#94A3B8" label="4 -> 1" />
-    <StationDot x={158} y={82} label="1" color={color} />
-    <StationDot x={414} y={82} label="2" color={color} />
-    <StationDot x={430} y={244} label="3" color={color} />
-    <StationDot x={142} y={244} label="4" color={color} />
+    <PhaseStep x={196} y={88} num="1" label="Aspirazione" detail="P bassa, T ambiente" color={color} />
+    <PhaseStep x={376} y={88} num="2" label="Compressione" detail="isentropica" color={color} />
+    <PhaseStep x={376} y={234} num="3" label="Combustione" detail="isocora" color={color} />
+    <PhaseStep x={196} y={234} num="4" label="Espansione" detail="isentropica" color={color} />
+    <line x1="210" y1="88" x2="362" y2="88" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
+    <line x1="376" y1="102" x2="376" y2="220" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
+    <line x1="362" y1="234" x2="210" y2="234" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
+    <line x1="196" y1="220" x2="196" y2="102" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
+    <polygon points="362,84 370,88 362,92" fill={`${color}80`} />
+    <polygon points="380,220 376,228 372,220" fill={`${color}80`} />
+    <polygon points="210,238 202,234 210,230" fill={`${color}80`} />
+    <polygon points="192,102 196,94 200,102" fill={`${color}80`} />
     <text x="286" y="316" textAnchor="middle" fill={MUTED} fontSize="11" fontWeight="700">
-      Compressione ed espansione politropiche, scambio termico isocoro
+      Sequenza temporale nel cilindro (sistema chiuso)
     </text>
   </g>
 );
@@ -239,16 +271,20 @@ const renderOttoPlant = (color) => (
 const renderDieselPlant = (color) => (
   <g>
     <Cylinder x={286} y={150} color={color} label="CILINDRO - CICLO DIESEL" topLabel="INIETTORE" />
-    <FlowArrow x1={176} y1={82} x2={228} y2={82} color="#60A5FA" label="1 -> 2" />
-    <FlowArrow x1={344} y1={114} x2={412} y2={114} color="#F97316" label="2 -> 3 (p cost)" labelY={94} />
-    <FlowArrow x1={360} y1={244} x2={412} y2={244} color="#34D399" label="3 -> 4" />
-    <FlowArrow x1={212} y1={244} x2={160} y2={244} color="#94A3B8" label="4 -> 1" />
-    <StationDot x={158} y={82} label="1" color={color} />
-    <StationDot x={414} y={82} label="2" color={color} />
-    <StationDot x={430} y={114} label="3" color={color} />
-    <StationDot x={142} y={244} label="4" color={color} />
+    <PhaseStep x={196} y={88} num="1" label="Aspirazione" detail="P bassa, T ambiente" color={color} />
+    <PhaseStep x={376} y={88} num="2" label="Compressione" detail="isentropica" color={color} />
+    <PhaseStep x={376} y={234} num="3" label="Combustione" detail="P costante" color={color} />
+    <PhaseStep x={196} y={234} num="4" label="Espansione" detail="isentropica" color={color} />
+    <line x1="210" y1="88" x2="362" y2="88" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
+    <line x1="376" y1="102" x2="376" y2="220" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
+    <line x1="362" y1="234" x2="210" y2="234" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
+    <line x1="196" y1="220" x2="196" y2="102" stroke={`${color}50`} strokeWidth="1.5" strokeDasharray="4 3" />
+    <polygon points="362,84 370,88 362,92" fill={`${color}80`} />
+    <polygon points="380,220 376,228 372,220" fill={`${color}80`} />
+    <polygon points="210,238 202,234 210,230" fill={`${color}80`} />
+    <polygon points="192,102 196,94 200,102" fill={`${color}80`} />
     <text x="286" y="316" textAnchor="middle" fill={MUTED} fontSize="11" fontWeight="700">
-      Combustione a pressione quasi costante, scarico termico isocoro
+      Sequenza temporale nel cilindro (sistema chiuso)
     </text>
   </g>
 );
@@ -285,12 +321,38 @@ const renderCarnotPlant = (color) => (
 
     <text x="286" y="64" textAnchor="middle" fill="#EF4444" fontSize="16" fontWeight="800">SORGENTE TH</text>
     <text x="286" y="294" textAnchor="middle" fill="#3B82F6" fontSize="16" fontWeight="800">POZZO TL</text>
-    <text x="286" y="166" textAnchor="middle" fill={color} fontSize="16" fontWeight="800">MOTORE</text>
-    <text x="286" y="188" textAnchor="middle" fill={color} fontSize="16" fontWeight="800">CARNOT</text>
+    <text x="286" y="172" textAnchor="middle" fill={color} fontSize="16" fontWeight="800">MOTORE</text>
+    <text x="286" y="194" textAnchor="middle" fill={color} fontSize="16" fontWeight="800">CARNOT</text>
 
     <FlowArrow x1={286} y1={86} x2={286} y2={126} color="#EF4444" label="QH" labelX={318} labelY={110} />
     <FlowArrow x1={286} y1={228} x2={286} y2={258} color="#3B82F6" label="QL" labelX={318} labelY={248} />
     <FlowArrow x1={368} y1={176} x2={464} y2={176} color={color} label="Wnet" labelY={156} />
+
+    <g transform="translate(204,126)">
+      <circle cx="0" cy="0" r="12" fill={PANEL} stroke={color} strokeWidth="2" />
+      <text y="1" textAnchor="middle" dominantBaseline="middle" fill={color} fontSize="10" fontWeight="800">1</text>
+      <text x="-4" y="-18" textAnchor="middle" fill="#EF4444" fontSize="8" fontWeight="700">Isoterma TH</text>
+    </g>
+    <g transform="translate(368,126)">
+      <circle cx="0" cy="0" r="12" fill={PANEL} stroke={color} strokeWidth="2" />
+      <text y="1" textAnchor="middle" dominantBaseline="middle" fill={color} fontSize="10" fontWeight="800">2</text>
+      <text x="4" y="-18" textAnchor="middle" fill={color} fontSize="8" fontWeight="700">Isentropica</text>
+    </g>
+    <g transform="translate(368,228)">
+      <circle cx="0" cy="0" r="12" fill={PANEL} stroke={color} strokeWidth="2" />
+      <text y="1" textAnchor="middle" dominantBaseline="middle" fill={color} fontSize="10" fontWeight="800">3</text>
+      <text x="4" y="28" textAnchor="middle" fill="#3B82F6" fontSize="8" fontWeight="700">Isoterma TL</text>
+    </g>
+    <g transform="translate(204,228)">
+      <circle cx="0" cy="0" r="12" fill={PANEL} stroke={color} strokeWidth="2" />
+      <text y="1" textAnchor="middle" dominantBaseline="middle" fill={color} fontSize="10" fontWeight="800">4</text>
+      <text x="-4" y="28" textAnchor="middle" fill={color} fontSize="8" fontWeight="700">Isentropica</text>
+    </g>
+    <line x1="204" y1="114" x2="368" y2="114" stroke={`${color}40`} strokeWidth="1" strokeDasharray="3 2" />
+    <line x1="380" y1="126" x2="380" y2="228" stroke={`${color}40`} strokeWidth="1" strokeDasharray="3 2" />
+    <line x1="368" y1="240" x2="204" y2="240" stroke={`${color}40`} strokeWidth="1" strokeDasharray="3 2" />
+    <line x1="192" y1="228" x2="192" y2="126" stroke={`${color}40`} strokeWidth="1" strokeDasharray="3 2" />
+
     <text x="286" y="336" textAnchor="middle" fill={MUTED} fontSize="11" fontWeight="700">
       2 isoterme + 2 isentropiche
     </text>
@@ -337,14 +399,14 @@ const SchematicDiagram = ({
 
   return (
     <div className="schematic-container glass">
-      <svg viewBox="0 0 980 420" width="100%" height="100%" className="schematic-svg" style={{ width, height }}>
-        <rect x="16" y="16" width="566" height="318" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
-        <rect x="602" y="16" width="362" height="318" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
-        <rect x="16" y="350" width="948" height="54" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
+      <svg viewBox="0 0 980 460" width="100%" height="100%" className="schematic-svg" style={{ width, height }}>
+        <rect x="16" y="16" width="566" height="360" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
+        <rect x="602" y="16" width="362" height="360" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
+        <rect x="16" y="392" width="948" height="52" rx="18" fill="#111827" stroke="rgba(255,255,255,0.08)" />
 
         <text x="40" y="42" fill={TEXT} fontSize="14" fontWeight="800">Schema impianto</text>
         <text x="626" y="42" fill={TEXT} fontSize="14" fontWeight="800">Punti del ciclo</text>
-        <text x="40" y="378" fill={TEXT} fontSize="14" fontWeight="800">Bilancio energetico</text>
+        <text x="40" y="420" fill={TEXT} fontSize="14" fontWeight="800">Bilancio energetico</text>
 
         <g transform="translate(10,12)">{plant}</g>
 
@@ -352,7 +414,7 @@ const SchematicDiagram = ({
           <PointCard
             key={`${infoLabels[index]}-${index}`}
             x={628}
-            y={58 + index * 64}
+            y={58 + index * 78}
             width={cardWidth}
             label={infoLabels[index]}
             point={point}
@@ -364,7 +426,7 @@ const SchematicDiagram = ({
           <MetricCard
             key={`${item.label}-${index}`}
             x={summaryStartX + index * (summaryCardWidth + summaryGap)}
-            y={360}
+            y={402}
             width={summaryCardWidth}
             label={item.label}
             value={item.value}

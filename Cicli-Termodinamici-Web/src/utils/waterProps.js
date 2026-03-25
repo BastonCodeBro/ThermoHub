@@ -107,7 +107,19 @@ export const solveFluid = async (inputs, fluid = 'Water') => {
       throw new Error(`Invalid thermodynamic state calculated for ${fluid}`);
     }
 
-    const finalV = inputs.v ?? (1 / lib.PropsSI('D', 'P', p, 'T', t, fluid));
+    let finalV;
+    if (inputs.v !== undefined && inputs.v !== null && Number.isFinite(inputs.v) && inputs.v > 0) {
+      finalV = inputs.v;
+    } else {
+      let d = lib.PropsSI('D', 'P', p, 'T', t, fluid);
+      if (!Number.isFinite(d) || d <= 0) {
+        d = lib.PropsSI('D', 'P', p, 'H', h, fluid);
+      }
+      if (!Number.isFinite(d) || d <= 0) {
+        d = lib.PropsSI('D', 'H', h, 'S', s, fluid);
+      }
+      finalV = Number.isFinite(d) && d > 0 ? 1 / d : null;
+    }
     return {
       p: p / 1e5,
       t: t - 273.15,

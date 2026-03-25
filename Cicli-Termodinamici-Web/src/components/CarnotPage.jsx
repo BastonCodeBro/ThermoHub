@@ -302,8 +302,8 @@ const CarnotPage = () => {
         Ciclo di Carnot ideale su gas ideale. Il rendimento dipende solo dalle temperature assolute delle sorgenti.
       </p>
       <div className="inputs-grid">
-        <InputField label="Temperatura Alta" value={inputs.t_high} onChange={(value) => setInputs({ ...inputs, t_high: value })} unit="C" accent={COLOR} />
-        <InputField label="Temperatura Bassa" value={inputs.t_low} onChange={(value) => setInputs({ ...inputs, t_low: value })} unit="C" accent={COLOR} />
+        <InputField label="Temperatura Alta" value={inputs.t_high} onChange={(value) => setInputs({ ...inputs, t_high: value })} unit="°C" accent={COLOR} />
+        <InputField label="Temperatura Bassa" value={inputs.t_low} onChange={(value) => setInputs({ ...inputs, t_low: value })} unit="°C" accent={COLOR} />
       </div>
       <div className="inputs-row">
         <InputField label="Pressione di Riferimento" value={inputs.p_ref} onChange={(value) => setInputs({ ...inputs, p_ref: value })} unit="bar" accent={COLOR} />

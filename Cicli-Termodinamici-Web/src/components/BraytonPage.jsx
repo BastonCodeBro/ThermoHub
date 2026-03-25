@@ -354,10 +354,10 @@ const BraytonPage = () => {
       <div className="inputs-grid">
         <InputField label="Pressione Iniziale" value={inputs.p_low} onChange={(value) => setInputs({ ...inputs, p_low: value })} unit="bar" accent={COLOR} />
         <InputField label="Rapporto di Compressione" value={inputs.beta} onChange={(value) => setInputs({ ...inputs, beta: value })} accent={COLOR} />
-        <InputField label="Temperatura Ingresso" value={inputs.t_min} onChange={(value) => setInputs({ ...inputs, t_min: value })} unit="C" accent={COLOR} />
+        <InputField label="Temperatura Ingresso" value={inputs.t_min} onChange={(value) => setInputs({ ...inputs, t_min: value })} unit="°C" accent={COLOR} />
       </div>
       <div className="inputs-row">
-        <InputField label="Temperatura Massima" value={inputs.t_max} onChange={(value) => setInputs({ ...inputs, t_max: value })} unit="C" accent={COLOR} />
+        <InputField label="Temperatura Massima" value={inputs.t_max} onChange={(value) => setInputs({ ...inputs, t_max: value })} unit="°C" accent={COLOR} />
         <InputField label="Rendimento Compressore" value={inputs.eta_c} onChange={(value) => setInputs({ ...inputs, eta_c: value })} step={0.01} min={0.5} max={1} accent={COLOR} />
       </div>
       <div className="inputs-row">
