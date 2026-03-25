@@ -53,7 +53,7 @@ export const exportToPDF = async ({
 
   pdf.setFontSize(10);
   pdf.setTextColor(100);
-  pdf.text(`Generato il ${new Date().toLocaleDateString('it-IT')} - ThermoHub`, margin, y);
+  pdf.text(`Generato il ${new Date().toLocaleDateString('it-IT')} da ThermoHub e Prof. Ing. Andrea Viola`, margin, y);
   y += 10;
 
   pdf.setDrawColor(200);
@@ -265,7 +265,8 @@ export const exportToPDF = async ({
     pdf.setTextColor(40);
 
     formulas.forEach((formula) => {
-      checkSpace(12);
+      const formulaLineCount = formula.numeric ? 3 : formula.value !== undefined ? 2 : 1;
+      checkSpace(8 + formulaLineCount * 5);
       if (formula.label) {
         pdf.setFont('helvetica', 'bold');
         pdf.text(formula.label, margin + 2, y);
@@ -292,6 +293,15 @@ export const exportToPDF = async ({
         : '';
       pdf.text(`${text}${valueText}`, margin + 4, y);
       y += 6;
+
+      if (formula.numeric) {
+        pdf.setFontSize(8);
+        pdf.setTextColor(90);
+        pdf.text(`Sostituzione numerica: ${formula.numeric}`, margin + 8, y);
+        y += 5;
+        pdf.setFontSize(9);
+        pdf.setTextColor(40);
+      }
     });
   }
 

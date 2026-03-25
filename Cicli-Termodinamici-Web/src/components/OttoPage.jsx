@@ -202,9 +202,24 @@ const OttoPage = () => {
           v: p.v,
         })),
         formulas: [
-          { label: 'Rendimento ideale', latex: '\\eta_{otto} = 1 - \\frac{1}{r^{k-1}}', value: results.stats.eta_ideal },
-          { label: 'Lavoro netto', latex: 'w_{net} = q_{in} - q_{out}', value: results.stats.q_in - results.stats.q_out },
-          { label: 'Rendimento reale', latex: '\\eta = \\frac{w_{net}}{q_{in}}', value: results.stats.eta },
+          {
+            label: 'Rendimento ideale',
+            latex: '\\eta_{otto} = 1 - \\frac{1}{r^{k-1}}',
+            value: results.stats.eta_ideal,
+            numeric: `(1 - 1 / ${inputs.r.toFixed(3)}^(1.4 - 1)) * 100 = ${results.stats.eta_ideal.toFixed(2)} %`,
+          },
+          {
+            label: 'Lavoro netto',
+            latex: 'w_{net} = q_{in} - q_{out}',
+            value: results.stats.q_in - results.stats.q_out,
+            numeric: `${results.stats.q_in.toFixed(2)} - ${results.stats.q_out.toFixed(2)} = ${(results.stats.q_in - results.stats.q_out).toFixed(2)} kJ/kg`,
+          },
+          {
+            label: 'Rendimento reale',
+            latex: '\\eta = \\frac{w_{net}}{q_{in}}',
+            value: results.stats.eta,
+            numeric: `((${(results.stats.q_in - results.stats.q_out).toFixed(2)}) / ${results.stats.q_in.toFixed(2)}) * 100 = ${results.stats.eta.toFixed(2)} %`,
+          },
         ],
         plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef },
         schematicRef,

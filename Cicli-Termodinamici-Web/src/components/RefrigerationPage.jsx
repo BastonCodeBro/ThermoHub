@@ -148,8 +148,18 @@ const RefrigerationPage = () => {
           t: p.t, p: p.p, h: p.h, s: p.s, v: p.v,
         })),
         formulas: [
-          { label: 'COP Frigorifero', latex: 'COP_{ref} = \\frac{q_L}{w_{in}} = \\frac{h_1 - h_4}{h_2 - h_1}', value: results.stats.cop },
-          { label: 'COP Pompa di Calore', latex: 'COP_{hp} = \\frac{q_H}{w_{in}} = \\frac{h_2 - h_3}{h_2 - h_1}', value: results.stats.cop_hp },
+          {
+            label: 'COP Frigorifero',
+            latex: 'COP_{ref} = \\frac{q_L}{w_{in}} = \\frac{h_1 - h_4}{h_2 - h_1}',
+            value: results.stats.cop,
+            numeric: `(${results.allPoints[0].h.toFixed(2)} - ${results.allPoints[3].h.toFixed(2)}) / (${results.allPoints[1].h.toFixed(2)} - ${results.allPoints[0].h.toFixed(2)}) = ${results.stats.cop.toFixed(2)}`,
+          },
+          {
+            label: 'COP Pompa di Calore',
+            latex: 'COP_{hp} = \\frac{q_H}{w_{in}} = \\frac{h_2 - h_3}{h_2 - h_1}',
+            value: results.stats.cop_hp,
+            numeric: `(${results.allPoints[1].h.toFixed(2)} - ${results.allPoints[2].h.toFixed(2)}) / (${results.allPoints[1].h.toFixed(2)} - ${results.allPoints[0].h.toFixed(2)}) = ${results.stats.cop_hp.toFixed(2)}`,
+          },
         ],
         plotRefs: { ts: tsRef, ph: phRef }, schematicRef,
       });
