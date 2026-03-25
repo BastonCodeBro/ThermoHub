@@ -1,24 +1,37 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { solveFluid } from '../utils/waterProps';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Wind } from 'lucide-react';
 import CyclePageLayout from './shared/CyclePageLayout';
 import InputField from './shared/InputField';
 import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
-import { exportToPDF } from '../utils/pdfExport';
-import { plotLayout, plotConfig, addTrace, genPvCurve, genTsCurve, genHsCurve } from './shared/plotConfig';
+import { plotLayout, plotConfig, addTrace } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
+import { calcBraytonCycle } from '../utils/idealGas';
+import { generateProcessPath } from '../utils/processPath';
 
 const COLOR = '#818CF8';
+const SEGMENT_COLORS = [COLOR, '#F97316', '#22D3EE', '#60A5FA'];
+const IDEAL_COLOR = '#475569';
 const isFiniteNumber = (value) => Number.isFinite(value);
 
 const pointAnnotations = (pts, labels, color) =>
-  pts.map((p, i) => ({
-    x: p.x, y: p.y, text: labels[i] || `${i + 1}`,
-    showarrow: true, arrowhead: 0, arrowsize: 1, arrowwidth: 1.5, arrowcolor: color,
-    ax: 22, ay: -22, font: { color, size: 13, family: 'Inter' },
-    bgcolor: '#0F172A', bordercolor: color, borderwidth: 1, borderpad: 4,
+  pts.map((p, index) => ({
+    x: p.x,
+    y: p.y,
+    text: labels[index] || `${index + 1}`,
+    showarrow: true,
+    arrowhead: 0,
+    arrowsize: 1,
+    arrowwidth: 1.5,
+    arrowcolor: color,
+    ax: 22,
+    ay: -22,
+    font: { color, size: 13, family: 'Inter' },
+    bgcolor: '#0F172A',
+    bordercolor: color,
+    borderwidth: 1,
+    borderpad: 4,
   }));
 
 const BraytonPage = () => {
@@ -34,7 +47,13 @@ const BraytonPage = () => {
   const schematicRef = useRef(null);
 
   const [inputs, setInputs] = useState({
-    p_low: 1.0, beta: 10, t_min: 20, t_max: 1000, eta_c: 0.85, eta_t: 0.88, mass_flow: 1.0,
+    p_low: 1.0,
+    beta: 10,
+    t_min: 20,
+    t_max: 1000,
+    eta_c: 0.85,
+    eta_t: 0.88,
+    mass_flow: 1.0,
   });
 
   useEffect(() => {
@@ -42,156 +61,156 @@ const BraytonPage = () => {
     if (!results || !node) return;
 
     const renderActivePlot = async () => {
-      const [p1, p2, p3, p4] = results.allPoints;
-      const fluid = 'Air';
+      const realPts = results.allPoints;
+      const idealPts = results.idealPoints;
+
+      const realPathOptions = [
+        { processType: 'polytropic', model: 'ideal-gas' },
+        { processType: 'isobaric', model: 'ideal-gas' },
+        { processType: 'polytropic', model: 'ideal-gas' },
+        { processType: 'isobaric', model: 'ideal-gas' },
+      ];
+
+      const idealPathOptions = [
+        { processType: 'isentropic', model: 'ideal-gas' },
+        { processType: 'isobaric', model: 'ideal-gas' },
+        { processType: 'isentropic', model: 'ideal-gas' },
+        { processType: 'isobaric', model: 'ideal-gas' },
+      ];
+
+      const [realPaths, idealPaths] = await Promise.all([
+        Promise.all([
+          generateProcessPath(realPts[0], realPts[1], 'Air', 64, realPathOptions[0]),
+          generateProcessPath(realPts[1], realPts[2], 'Air', 64, realPathOptions[1]),
+          generateProcessPath(realPts[2], realPts[3], 'Air', 64, realPathOptions[2]),
+          generateProcessPath(realPts[3], realPts[0], 'Air', 64, realPathOptions[3]),
+        ]),
+        Promise.all([
+          generateProcessPath(idealPts[0], idealPts[1], 'Air', 64, idealPathOptions[0]),
+          generateProcessPath(idealPts[1], idealPts[2], 'Air', 64, idealPathOptions[1]),
+          generateProcessPath(idealPts[2], idealPts[3], 'Air', 64, idealPathOptions[2]),
+          generateProcessPath(idealPts[3], idealPts[0], 'Air', 64, idealPathOptions[3]),
+        ]),
+      ]);
+
+      const addIdealTraces = (mapperX, mapperY) =>
+        idealPaths.map((path) => addTrace(path.map(mapperX), path.map(mapperY), {
+          color: IDEAL_COLOR,
+          width: 2,
+          dash: 'dash',
+          mode: 'lines',
+        }));
 
       if (activeTab === 0) {
-        const paths = await Promise.all([
-          generateProcessPath(p1, p2, fluid),
-          generateProcessPath(p2, p3, fluid),
-          generateProcessPath(p3, p4, fluid),
-          generateProcessPath(p4, p1, fluid),
-        ]);
-        
         const data = [
-          ...paths.map((path, i) => addTrace(path.map(p => p.s), path.map(p => p.t), {
-            name: `Tratto ${i+1}`,
-            color: [COLOR, '#F97316', '#22D3EE', '#60A5FA'][i],
-            width: 3,
-            mode: 'lines',
-          })),
-          addTrace(results.allPoints.map(p => p.s), results.allPoints.map(p => p.t), {
-            name: 'Stati', color: COLOR, mode: 'markers', markerSize: 10
+          ...realPaths.map((path, index) =>
+            addTrace(path.map((p) => p.s), path.map((p) => p.t), {
+              name: `Tratto ${index + 1}`,
+              color: SEGMENT_COLORS[index],
+              width: 3,
+              mode: 'lines',
+            }),
+          ),
+          ...addIdealTraces((p) => p.s, (p) => p.t),
+          addTrace(realPts.map((p) => p.s), realPts.map((p) => p.t), {
+            color: COLOR,
+            mode: 'markers',
+            markerSize: 10,
           }),
         ];
-
-        if (results.idealPoints) {
-          const [i1, i2, i3, i4] = results.idealPoints;
-          const iPaths = await Promise.all([
-            generateProcessPath(i1, i2, fluid),
-            generateProcessPath(i2, i3, fluid),
-            generateProcessPath(i3, i4, fluid),
-            generateProcessPath(i4, i1, fluid),
-          ]);
-          data.push(...iPaths.map(path => addTrace(path.map(p => p.s), path.map(p => p.t), {
-            color: '#475569', width: 2, dash: 'dash', mode: 'lines'
-          })));
-        }
-
-        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Temperatura T (°C)');
+        const layout = plotLayout('Entropia s (kJ/kg K)', 'Temperatura T (C)');
         layout.annotations = pointAnnotations(
-          results.allPoints.map(p => ({ x: p.s, y: p.t })),
-          ['1\nAspiraz.', '2\nComp.', '3\nCombust.', '4\nTurbina'],
-          COLOR
+          realPts.map((p) => ({ x: p.s, y: p.t })),
+          ['1\nAspirazione', '2\nCompressore', '3\nCombustore', '4\nTurbina'],
+          COLOR,
         );
         renderPlot(node, data, layout, plotConfig);
       } else if (activeTab === 1) {
-        const paths = await Promise.all([
-          generateProcessPath(p1, p2, fluid),
-          generateProcessPath(p2, p3, fluid),
-          generateProcessPath(p3, p4, fluid),
-          generateProcessPath(p4, p1, fluid),
-        ]);
         const data = [
-          ...paths.map((path, i) => addTrace(path.map(p => p.v), path.map(p => p.p), {
-            name: `Tratto ${i+1}`,
-            color: ['#A78BFA', '#F97316', '#22D3EE', '#60A5FA'][i],
-            width: 3,
-            mode: 'lines',
-          })),
-          addTrace(results.allPoints.map(p => p.v), results.allPoints.map(p => p.p), {
-            name: 'Stati', color: '#A78BFA', mode: 'markers', markerSize: 10
+          ...realPaths.map((path, index) =>
+            addTrace(path.map((p) => p.v), path.map((p) => p.p), {
+              name: `Tratto ${index + 1}`,
+              color: SEGMENT_COLORS[index],
+              width: 3,
+              mode: 'lines',
+            }),
+          ),
+          ...addIdealTraces((p) => p.v, (p) => p.p),
+          addTrace(realPts.map((p) => p.v), realPts.map((p) => p.p), {
+            color: COLOR,
+            mode: 'markers',
+            markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)');
-        layout.annotations = pointAnnotations(
-          results.allPoints.map(p => ({ x: p.v, y: p.p })),
-          ['1', '2', '3', '4'],
-          COLOR
-        );
+        const layout = plotLayout('Volume specifico v (m^3/kg)', 'Pressione P (bar)');
+        layout.annotations = pointAnnotations(realPts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
         renderPlot(node, data, layout, plotConfig);
-      } else if (activeTab === 2) {
-        const paths = await Promise.all([
-          generateProcessPath(p1, p2, fluid),
-          generateProcessPath(p2, p3, fluid),
-          generateProcessPath(p3, p4, fluid),
-          generateProcessPath(p4, p1, fluid),
-        ]);
+      } else {
         const data = [
-          ...paths.map((path, i) => addTrace(path.map(p => p.s), path.map(p => p.h), {
-            name: `Tratto ${i+1}`,
-            color: [COLOR, '#F97316', '#22D3EE', '#60A5FA'][i],
-            width: 3,
-            mode: 'lines',
-          })),
-          addTrace(results.allPoints.map(p => p.s), results.allPoints.map(p => p.h), {
-            name: 'Stati', color: COLOR, mode: 'markers', markerSize: 10
+          ...realPaths.map((path, index) =>
+            addTrace(path.map((p) => p.s), path.map((p) => p.h), {
+              name: `Tratto ${index + 1}`,
+              color: SEGMENT_COLORS[index],
+              width: 3,
+              mode: 'lines',
+            }),
+          ),
+          ...addIdealTraces((p) => p.s, (p) => p.h),
+          addTrace(realPts.map((p) => p.s), realPts.map((p) => p.h), {
+            color: COLOR,
+            mode: 'markers',
+            markerSize: 10,
           }),
         ];
-        if (results.idealPoints) {
-          const [i1, i2, i3, i4] = results.idealPoints;
-          const iPaths = await Promise.all([
-            generateProcessPath(i1, i2, fluid),
-            generateProcessPath(i2, i3, fluid),
-            generateProcessPath(i3, i4, fluid),
-            generateProcessPath(i4, i1, fluid),
-          ]);
-          data.push(...iPaths.map(path => addTrace(path.map(p => p.s), path.map(p => p.h), {
-            color: '#475569', width: 2, dash: 'dash', mode: 'lines'
-          })));
-        }
-        const layout = plotLayout('Entropia s (kJ/kg·K)', 'Entalpia h (kJ/kg)');
-        layout.annotations = pointAnnotations(
-          results.allPoints.map(p => ({ x: p.s, y: p.h })),
-          ['1\nAspiraz.', '2\nComp.', '3\nCombust.', '4\nTurbina'],
-          COLOR
-        );
+        const layout = plotLayout('Entropia s (kJ/kg K)', 'Entalpia h (kJ/kg)');
+        layout.annotations = pointAnnotations(realPts.map((p) => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
         renderPlot(node, data, layout, plotConfig);
       }
     };
+
     renderActivePlot();
     return () => cleanupPlot(node);
   }, [results, activeTab]);
 
-  const canCalculate = isFiniteNumber(inputs.p_low) && isFiniteNumber(inputs.beta)
-    && isFiniteNumber(inputs.t_min) && isFiniteNumber(inputs.t_max)
-    && isFiniteNumber(inputs.eta_c) && isFiniteNumber(inputs.eta_t)
+  const canCalculate = isFiniteNumber(inputs.p_low)
+    && isFiniteNumber(inputs.beta)
+    && isFiniteNumber(inputs.t_min)
+    && isFiniteNumber(inputs.t_max)
+    && isFiniteNumber(inputs.eta_c)
+    && isFiniteNumber(inputs.eta_t)
     && isFiniteNumber(inputs.mass_flow)
-    && inputs.p_low > 0 && inputs.beta > 1 && inputs.t_max > inputs.t_min
-    && inputs.eta_c > 0 && inputs.eta_c <= 1 && inputs.eta_t > 0 && inputs.eta_t <= 1
+    && inputs.p_low > 0
+    && inputs.beta > 1
+    && inputs.t_max > inputs.t_min
+    && inputs.eta_c > 0
+    && inputs.eta_c <= 1
+    && inputs.eta_t > 0
+    && inputs.eta_t <= 1
     && inputs.mass_flow > 0;
 
   const calculate = async () => {
     setLoading(true);
     setError(null);
-    const fluid = 'Air';
     try {
-      const st1 = await solveFluid({ p: inputs.p_low, t: inputs.t_min }, fluid);
       const pHigh = inputs.p_low * inputs.beta;
-
-      const st2s = await solveFluid({ p: pHigh, s: st1.s }, fluid);
-      const h2r = st1.h + (st2s.h - st1.h) / inputs.eta_c;
-      const st2r = await solveFluid({ p: pHigh, h: h2r }, fluid);
-
-      const st3 = await solveFluid({ p: pHigh, t: inputs.t_max }, fluid);
-
-      const st4s = await solveFluid({ p: inputs.p_low, s: st3.s }, fluid);
-      const h4r = st3.h - (st3.h - st4s.h) * inputs.eta_t;
-      const st4r = await solveFluid({ p: inputs.p_low, h: h4r }, fluid);
-
-      const wc = st2r.h - st1.h;
-      const wt = st3.h - st4r.h;
-      const q_in = st3.h - st2r.h;
-      const w_net = wt - wc;
+      const cycle = calcBraytonCycle({
+        p1Bar: inputs.p_low,
+        t1C: inputs.t_min,
+        p2Bar: pHigh,
+        t3C: inputs.t_max,
+        etaComp: inputs.eta_c,
+        etaTurb: inputs.eta_t,
+        massFlow: inputs.mass_flow,
+      });
 
       setResults({
-        allPoints: [st1, st2r, st3, st4r],
-        idealPoints: [st1, st2s, st3, st4s],
-        stats: { wt, wc, q_in, eta: (w_net / q_in) * 100, power: w_net * inputs.mass_flow, bwr: (wc / wt) * 100 },
+        allPoints: cycle.realPoints,
+        idealPoints: cycle.idealPoints,
+        stats: cycle.stats,
       });
-    } catch (err) {
-      setError('Errore nel calcolo: verificare i parametri di ingresso.');
-      console.error(err);
+    } catch (calculationError) {
+      setError('Parametri non validi: controlla rapporto di compressione, temperature e rendimenti.');
+      console.error(calculationError);
     } finally {
       setLoading(false);
     }
@@ -201,53 +220,66 @@ const BraytonPage = () => {
     if (!results) return;
     setDownloadingPDF(true);
     try {
+      const { exportToPDF } = await import('../utils/pdfExport');
       await exportToPDF({
-        title: 'Brayton-Joule', accentColor: COLOR, inputs, stats: results.stats,
-        points: results.allPoints.map((p, i) => ({
-          label: ['1: Aspiraz.', '2: Comp.', '3: Comb.', '4: Turb.'][i],
-          t: p.t, p: p.p, h: p.h, s: p.s, v: p.v,
+        title: 'Brayton-Joule',
+        accentColor: COLOR,
+        inputs,
+        stats: results.stats,
+        points: results.allPoints.map((p, index) => ({
+          label: ['1: Aspir.', '2: Comp.', '3: Comb.', '4: Turb.'][index],
+          t: p.t,
+          p: p.p,
+          h: p.h,
+          s: p.s,
+          v: p.v,
         })),
         formulas: [
-          { label: 'Lavoro Compressore', latex: 'w_c = h_2 - h_1', value: results.stats.wc },
-          { label: 'Lavoro Turbina', latex: 'w_t = h_3 - h_4', value: results.stats.wt },
-          { label: 'Calore Ingresso', latex: 'q_{in} = h_3 - h_2', value: results.stats.q_in },
-          { label: 'Rendimento', latex: '\\eta = \\frac{w_t - w_c}{q_{in}}', value: results.stats.eta },
-          { label: 'Back Work Ratio', latex: 'BWR = \\frac{w_c}{w_t}', value: results.stats.bwr },
+          { label: 'Lavoro compressore', latex: 'w_c = c_p (T_2 - T_1)', value: results.stats.wc },
+          { label: 'Lavoro turbina', latex: 'w_t = c_p (T_3 - T_4)', value: results.stats.wt },
+          { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: results.stats.q_in },
+          { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t}', value: results.stats.bwr },
+          { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}}', value: results.stats.eta },
         ],
-        plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef }, schematicRef,
+        plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef },
+        schematicRef,
       });
-    } catch (err) { console.error('PDF export error:', err); }
-    finally { setDownloadingPDF(false); }
+    } catch (downloadError) {
+      console.error(downloadError);
+    } finally {
+      setDownloadingPDF(false);
+    }
   }, [results, inputs]);
 
   const diagramTabs = results ? [
-    { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0),
-      content: <div ref={tsRef} className="plot-area" /> },
-    { id: 'pv', label: 'P-v', active: activeTab === 1, onClick: () => setActiveTab(1),
-      content: <div ref={pvRef} className="plot-area" /> },
-    { id: 'hs', label: 'h-s', active: activeTab === 2, onClick: () => setActiveTab(2),
-      content: <div ref={hsRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3),
-      content: <div ref={schematicRef}><SchematicDiagram type="brayton" accentColor={COLOR} /></div> },
+    { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0), content: <div ref={tsRef} className="plot-area" /> },
+    { id: 'pv', label: 'P-v', active: activeTab === 1, onClick: () => setActiveTab(1), content: <div ref={pvRef} className="plot-area" /> },
+    { id: 'hs', label: 'h-s', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={hsRef} className="plot-area" /> },
+    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3), content: <div ref={schematicRef}><SchematicDiagram type="brayton" accentColor={COLOR} /></div> },
   ] : null;
 
   const formulasSection = results ? (
-    <FormulasSection accentColor={COLOR}
-      points={results.allPoints.map((p, i) => ({
-        label: ['1: Aspir.', '2: Comp.', '3: Comb.', '4: Turb.'][i],
-        t: p.t, p: p.p, h: p.h, s: p.s, v: p.v,
+    <FormulasSection
+      accentColor={COLOR}
+      points={results.allPoints.map((p, index) => ({
+        label: ['1: Aspir.', '2: Comp.', '3: Comb.', '4: Turb.'][index],
+        t: p.t,
+        p: p.p,
+        h: p.h,
+        s: p.s,
+        v: p.v,
       }))}
       formulas={[
-        { label: 'Punto 1 — Aspirazione', latex: 'P_1 = P_{low}, \\quad T_1 = T_{amb}' },
-        { label: 'Punto 2 — Uscita compressore (reale)', latex: 'h_2 = h_1 + \\frac{h_{2s} - h_1}{\\eta_c}, \\quad P_2 = P_1 \\cdot \\beta' },
-        { label: 'Punto 3 — Uscita camera combustione', latex: 'P_3 = P_2, \\quad T_3 = T_{max}' },
-        { label: 'Punto 4 — Uscita turbina (reale)', latex: 'h_4 = h_3 - \\eta_t(h_3 - h_{4s}), \\quad P_4 = P_1' },
-        { label: 'Lavoro Compressore', latex: 'w_c = h_2 - h_1', value: results.stats.wc },
-        { label: 'Lavoro Turbina', latex: 'w_t = h_3 - h_4', value: results.stats.wt },
-        { label: 'Calore Ingresso', latex: 'q_{in} = h_3 - h_2', value: results.stats.q_in },
-        { label: 'Rendimento', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: results.stats.eta, display: true },
-        { label: 'Back Work Ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: results.stats.bwr },
-        { label: 'Potenza Netta', latex: '\\dot{W}_{net} = \\dot{m} \\cdot (w_t - w_c)', value: results.stats.power },
+        { label: 'Rapporto di compressione in pressione', latex: '\\beta = \\frac{P_2}{P_1}', value: inputs.beta },
+        { label: '1 -> 2', latex: 'Compressione politropica reale nel compressore' },
+        { label: '2 -> 3', latex: 'Apporto di calore a pressione costante' },
+        { label: '3 -> 4', latex: 'Espansione politropica reale in turbina' },
+        { label: '4 -> 1', latex: 'Cessione di calore a pressione costante' },
+        { label: 'Lavoro compressore', latex: 'w_c = c_p (T_2 - T_1)', value: results.stats.wc },
+        { label: 'Lavoro turbina', latex: 'w_t = c_p (T_3 - T_4)', value: results.stats.wt },
+        { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: results.stats.q_in },
+        { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: results.stats.bwr },
+        { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: results.stats.eta, display: true },
       ]}
     />
   ) : null;
@@ -255,28 +287,44 @@ const BraytonPage = () => {
   const stats = results ? (
     <div className="stats-row">
       <StatCard label="Rendimento" value={`${results.stats.eta.toFixed(2)}%`} accent color={COLOR} />
-      <StatCard label="Potenza Netta" value={`${(results.stats.power / 1000).toFixed(2)} MW`} />
+      <StatCard label="Potenza Netta" value={`${results.stats.power.toFixed(2)} kW`} />
       <StatCard label="BWR" value={`${results.stats.bwr.toFixed(1)}%`} />
       <StatCard label="Calore In" value={`${results.stats.q_in.toFixed(1)} kJ/kg`} />
     </div>
   ) : null;
 
   return (
-    <CyclePageLayout badge="Turbina a Gas" title="Ciclo" titleAccent="Brayton-Joule" accentColor={COLOR}
-      loading={loading} error={error} results={results} onCalculate={calculate} canCalculate={canCalculate}
-      stats={stats} diagramTabs={diagramTabs} formulasSection={formulasSection}
-      onDownloadPDF={handleDownloadPDF} downloadingPDF={downloadingPDF} EmptyIcon={Wind}>
+    <CyclePageLayout
+      badge="Turbina a Gas"
+      title="Ciclo"
+      titleAccent="Brayton-Joule"
+      accentColor={COLOR}
+      loading={loading}
+      error={error}
+      results={results}
+      onCalculate={calculate}
+      canCalculate={canCalculate}
+      stats={stats}
+      diagramTabs={diagramTabs}
+      formulasSection={formulasSection}
+      onDownloadPDF={handleDownloadPDF}
+      downloadingPDF={downloadingPDF}
+      EmptyIcon={Wind}
+    >
       <h3 className="card-title">Parametri Aria</h3>
       <div className="inputs-grid">
-        <InputField label="Rapporto di Compressione (β)" value={inputs.beta} onChange={v => setInputs({ ...inputs, beta: v })} accent={COLOR} />
-        <InputField label="Temperatura Ambiente" value={inputs.t_min} onChange={v => setInputs({ ...inputs, t_min: v })} unit="°C" accent={COLOR} />
-        <InputField label="Temperatura Turbina In" value={inputs.t_max} onChange={v => setInputs({ ...inputs, t_max: v })} unit="°C" accent={COLOR} />
+        <InputField label="Pressione Iniziale" value={inputs.p_low} onChange={(value) => setInputs({ ...inputs, p_low: value })} unit="bar" accent={COLOR} />
+        <InputField label="Rapporto di Compressione" value={inputs.beta} onChange={(value) => setInputs({ ...inputs, beta: value })} accent={COLOR} />
+        <InputField label="Temperatura Ingresso" value={inputs.t_min} onChange={(value) => setInputs({ ...inputs, t_min: value })} unit="C" accent={COLOR} />
       </div>
       <div className="inputs-row">
-        <InputField label="η Compressore" value={inputs.eta_c} onChange={v => setInputs({ ...inputs, eta_c: v })} step={0.01} min={0.5} max={1} accent={COLOR} />
-        <InputField label="η Turbina" value={inputs.eta_t} onChange={v => setInputs({ ...inputs, eta_t: v })} step={0.01} min={0.5} max={1} accent={COLOR} />
+        <InputField label="Temperatura Massima" value={inputs.t_max} onChange={(value) => setInputs({ ...inputs, t_max: value })} unit="C" accent={COLOR} />
+        <InputField label="Rendimento Compressore" value={inputs.eta_c} onChange={(value) => setInputs({ ...inputs, eta_c: value })} step={0.01} min={0.5} max={1} accent={COLOR} />
       </div>
-      <InputField label="Portata Massica" value={inputs.mass_flow} onChange={v => setInputs({ ...inputs, mass_flow: v })} unit="kg/s" step={0.1} accent={COLOR} />
+      <div className="inputs-row">
+        <InputField label="Rendimento Turbina" value={inputs.eta_t} onChange={(value) => setInputs({ ...inputs, eta_t: value })} step={0.01} min={0.5} max={1} accent={COLOR} />
+        <InputField label="Portata Massica" value={inputs.mass_flow} onChange={(value) => setInputs({ ...inputs, mass_flow: value })} unit="kg/s" step={0.1} accent={COLOR} />
+      </div>
     </CyclePageLayout>
   );
 };

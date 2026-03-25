@@ -24,7 +24,7 @@ const Hero = () => {
         </h1>
 
         <p className="hero-description">
-          Esplora, calcola e visualizza i principali cicli termodinamici con proprietà
+          Esplora, calcola e visualizza i principali cicli termodinamici con proprieta
           fluido accurate (IAPWS-97, CoolProp) e diagrammi interattivi.
         </p>
 
@@ -32,7 +32,12 @@ const Hero = () => {
           <button className="btn-primary" onClick={scrollToCycles}>
             Inizia Ora <ArrowRight className="btn-icon" />
           </button>
-          <a href="https://github.com/BastonCodeBro/Thermodynamics-Cycles-Open_Source" className="btn-outline" target="_blank" rel="noopener noreferrer">
+          <a
+            href="https://github.com/BastonCodeBro/Thermodynamics-Cycles-Open_Source"
+            className="btn-outline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             GitHub
           </a>
         </div>

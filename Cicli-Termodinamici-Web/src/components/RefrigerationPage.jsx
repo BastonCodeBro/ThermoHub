@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { solveFluid, getSaturationDomeFull } from '../utils/waterProps';
 import { generateProcessPath } from '../utils/processPath';
 import { Snowflake } from 'lucide-react';
@@ -7,7 +7,6 @@ import InputField from './shared/InputField';
 import StatCard from './shared/StatCard';
 import FormulasSection from './shared/FormulasSection';
 import SchematicDiagram from './shared/SchematicDiagram';
-import { exportToPDF } from '../utils/pdfExport';
 import { plotLayout, plotConfig, addTrace, addDomeTrace } from './shared/plotConfig';
 import { renderPlot, cleanupPlot } from '../utils/plotly';
 
@@ -141,6 +140,7 @@ const RefrigerationPage = () => {
     if (!results) return;
     setDownloadingPDF(true);
     try {
+      const { exportToPDF } = await import('../utils/pdfExport');
       await exportToPDF({
         title: 'Frigorifero', accentColor: COLOR, inputs, stats: results.stats,
         points: results.allPoints.map((p, i) => ({

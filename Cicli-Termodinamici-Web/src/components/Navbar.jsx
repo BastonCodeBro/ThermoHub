@@ -9,6 +9,7 @@ const cycleLinks = [
   { to: '/diesel', label: 'Diesel' },
   { to: '/frigo', label: 'Frigorifero' },
   { to: '/carnot', label: 'Carnot' },
+  { to: '/laboratorio-vapore', label: 'Lab Vapore' },
 ];
 
 const Navbar = () => {

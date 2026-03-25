@@ -1,56 +1,105 @@
-# ThermoHub - Cicli Termodinamici
+# Cicli Termodinamici Web
 
-Applicazione web interattiva per analizzare cicli termodinamici:
+Applicazione web React/Vite per lo studio interattivo dei cicli termodinamici.
 
-- Rankine
-- Brayton-Joule
-- Otto
-- Diesel
-- Frigorifero a compressione (R134a)
-- Carnot (ideale)
+React/Vite web application for interactive thermodynamic-cycle analysis.
+
+Stato verificato il **2026-03-25**.
+
+## Obiettivo
+
+- questa cartella contiene il prodotto deployato su Vercel
+- non usa Streamlit
+- non richiede runtime Python lato deploy
+- incorpora anche un flusso avanzato ispirato al vecchio strumento desktop tramite `Laboratorio Vapore`
+
+## Route Disponibili
+
+- `/`
+- `/rankine`
+- `/brayton`
+- `/otto`
+- `/diesel`
+- `/frigo`
+- `/carnot`
+- `/laboratorio-vapore`
+
+## Funzionalita Principali
+
+- diagrammi interattivi Plotly
+- export PDF per le pagine ciclo
+- proprieta reali via `coolprop-wasm` per acqua e refrigeranti
+- percorsi gas-ideali coerenti per Brayton, Otto, Diesel e Carnot
+- confronto ideale/reale nella pagina Brayton
+- laboratorio vapore con costruzione manuale dei punti da coppie di proprieta
 
 ## Stack
 
-- React + Vite
-- React Router
-- CoolProp via `coolprop-wasm`
-- Plotly (`plotly.js-dist-min`)
+- React 19
+- Vite 8
+- React Router 7
+- `coolprop-wasm`
+- `plotly.js`
+- `jspdf`
+- `html2canvas`
+- Vitest
+- ESLint
 
-## Prerequisiti
+## Avvio Locale
 
-- Node.js 20+ consigliato
-- npm
-
-## Avvio locale
-
-```bash
+```powershell
 npm install
 npm run dev
 ```
 
-Apri poi l'URL mostrato da Vite (di default `http://localhost:5173`).
+## Script
 
-## Script disponibili
+- `npm run dev`
+- `npm run build`
+- `npm run preview`
+- `npm run test`
+- `npm run lint`
 
-- `npm run dev` - ambiente di sviluppo
-- `npm run build` - build produzione
-- `npm run preview` - anteprima build
-- `npm run lint` - lint del progetto
+## API JS Utilizzate
 
-## Note tecniche
+Utility da considerare parte dell'interfaccia attuale del frontend:
 
-- Il motore termodinamico viene inizializzato all'avvio tramite `ensureCoolProp()`.
-- Il file wasm richiesto da CoolProp e servito da `public/coolprop.wasm`.
-- I grafici usano Plotly locale con aggiornamento incrementale (`Plotly.react`) e cleanup al cambio pagina.
+- `solveFluid`
+- `getSaturationDome`
+- `getSaturationDomeFull`
+- `generateProcessPath`
+- `exportToPDF`
 
-## Struttura principale
+Per i cicli a gas:
 
-- `src/components/` - pagine ciclo e componenti UI
-- `src/components/shared/` - layout e widget condivisi
-- `src/utils/waterProps.js` - wrapper proprietà termodinamiche
-- `src/utils/plotly.js` - utilità rendering/cleanup grafici
+- `calcOttoCycle`
+- `calcDieselCycle`
+- `calcBraytonCycle`
+- `calcCarnotCycle`
+- `generateIdealGasPath`
 
-## Troubleshooting rapido
+## Asset E Runtime
 
-- **Errore inizializzazione CoolProp:** verifica che `public/coolprop.wasm` sia presente e raggiungibile.
-- **Calcolo disabilitato:** controlla che i parametri siano numerici e fisicamente coerenti (es. `T_high > T_low`).
+- il file WASM richiesto e `public/coolprop.wasm`
+- l'inizializzazione di CoolProp e lazy
+- il deploy Vercel del repository usa la build prodotta da questa cartella
+
+## Stato Dei Check
+
+Verificato il **2026-03-25**:
+
+- `npm run lint` -> passed
+- `npm run test` -> passed
+- `npm run build` -> passed
+
+## Limitazioni Note
+
+- la copertura test e ancora leggera e concentrata sul routing
+- parte del dominio termodinamico e ancora separata fra codice web attivo e codice Python legacy
+- restano file storici desktop nel repository root, ma non servono al deploy del sito
+
+## Documenti Correlati
+
+- [../docs/USO_WEB.md](../docs/USO_WEB.md)
+- [../docs/ARCHITETTURA.md](../docs/ARCHITETTURA.md)
+- [../docs/MANUTENZIONE_E_MIGLIORAMENTI.md](../docs/MANUTENZIONE_E_MIGLIORAMENTI.md)

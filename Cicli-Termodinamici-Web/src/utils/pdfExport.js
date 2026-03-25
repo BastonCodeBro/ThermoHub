@@ -1,18 +1,23 @@
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+let jsPdfPromise = null;
+let html2CanvasPromise = null;
+
+const getJsPDF = async () => {
+  if (!jsPdfPromise) {
+    jsPdfPromise = import('jspdf').then((module) => module.jsPDF);
+  }
+  return jsPdfPromise;
+};
+
+const getHtml2Canvas = async () => {
+  if (!html2CanvasPromise) {
+    html2CanvasPromise = import('html2canvas').then((module) => module.default);
+  }
+  return html2CanvasPromise;
+};
 
 /**
  * Exports a cycle page to PDF with diagrams, tables, and formulas.
  * @param {Object} options
- * @param {string} options.title - Cycle name
- * @param {string} options.accentColor - Hex color for accents
- * @param {Object} options.inputs - Input parameters used
- * @param {Object} options.stats - Result statistics
- * @param {Array} options.points - Thermodynamic state points
- * @param {Array} options.formulas - Formula entries
- * @param {React.RefObject} options.plotRefs - Object of {name: ref} for diagram containers
- * @param {React.RefObject} options.schematicRef - Ref to schematic container
- * @param {React.RefObject} options.formulasRef - Ref to formulas section container
  */
 export const exportToPDF = async ({
   title,
@@ -24,6 +29,7 @@ export const exportToPDF = async ({
   plotRefs = {},
   schematicRef,
 }) => {
+  const [jsPDF, html2canvas] = await Promise.all([getJsPDF(), getHtml2Canvas()]);
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageW = 210;
   const margin = 15;
@@ -36,12 +42,9 @@ export const exportToPDF = async ({
   };
 
   const checkSpace = (needed) => {
-    if (y + needed > 280) {
-      addNewPage();
-    }
+    if (y + needed > 280) addNewPage();
   };
 
-  // --- TITLE ---
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(22);
   pdf.setTextColor(accentColor);
@@ -53,7 +56,6 @@ export const exportToPDF = async ({
   pdf.text(`Generato il ${new Date().toLocaleDateString('it-IT')} - ThermoHub`, margin, y);
   y += 10;
 
-  // --- INPUT PARAMETERS ---
   pdf.setDrawColor(200);
   pdf.line(margin, y, pageW - margin, y);
   y += 6;
@@ -66,16 +68,16 @@ export const exportToPDF = async ({
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(10);
   pdf.setTextColor(60);
-  const inputEntries = Object.entries(inputs);
+
   const inputLabels = {
     p_high: 'Pressione Caldaia (bar)',
     p_low: 'Pressione Bassa (bar)',
-    t_max: 'Temperatura Massima (°C)',
-    t_min: 'Temperatura Ambiente (°C)',
-    t_high: 'Temperatura Alta (°C)',
-    t_low: 'Temperatura Bassa (°C)',
-    t_evap: 'Temp. Evaporazione (°C)',
-    t_cond: 'Temp. Condensazione (°C)',
+    t_max: 'Temperatura Massima (C)',
+    t_min: 'Temperatura Ambiente (C)',
+    t_high: 'Temperatura Alta (C)',
+    t_low: 'Temperatura Bassa (C)',
+    t_evap: 'Temp. Evaporazione (C)',
+    t_cond: 'Temp. Condensazione (C)',
     eta_t: 'Rendimento Turbina',
     eta_p: 'Rendimento Pompa',
     eta_c: 'Rendimento Compressore',
@@ -83,20 +85,18 @@ export const exportToPDF = async ({
     mass_flow: 'Portata Massica (kg/s)',
     r: 'Rapporto di Compressione',
     rc: 'Rapporto di Combustione',
-    beta: 'Rapporto Compressione (β)',
+    beta: 'Rapporto Compressione (beta)',
     sh: 'Surriscaldamento (K)',
     sc: 'Sottoraffreddamento (K)',
     p_ref: 'Pressione Riferimento (bar)',
   };
 
-  for (const [key, val] of inputEntries) {
-    const label = inputLabels[key] || key;
-    pdf.text(`${label}: ${val}`, margin + 2, y);
+  for (const [key, val] of Object.entries(inputs)) {
+    pdf.text(`${inputLabels[key] || key}: ${val}`, margin + 2, y);
     y += 5;
   }
   y += 4;
 
-  // --- RESULTS ---
   checkSpace(40);
   pdf.line(margin, y, pageW - margin, y);
   y += 6;
@@ -109,77 +109,75 @@ export const exportToPDF = async ({
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(10);
   pdf.setTextColor(60);
+
+  const statLabels = {
+    eta: 'Rendimento (%)',
+    power: 'Potenza Netta (kW)',
+    wt: 'Lavoro Turbina (kJ/kg)',
+    wp: 'Lavoro Pompa (kJ/kg)',
+    wc: 'Lavoro Compressore (kJ/kg)',
+    q_in: 'Calore Ingresso (kJ/kg)',
+    q_out: 'Calore Uscita (kJ/kg)',
+    bwr: 'Back Work Ratio (%)',
+    cop: 'COP Frigorifero',
+    cop_hp: 'COP Pompa di Calore',
+    cooling_cap: 'Capacita Frigorifera (kW)',
+    qlow: 'Calore Basso (kJ/kg)',
+    qhigh: 'Calore Alto (kJ/kg)',
+    win: 'Lavoro Compressore (kJ/kg)',
+    Q_in: 'Calore Ingresso (kJ/kg)',
+    Q_out: 'Calore Uscita (kJ/kg)',
+    W_net: 'Lavoro Netto (kJ/kg)',
+  };
+
   for (const [key, val] of Object.entries(stats)) {
-    const labels = {
-      eta: 'Rendimento (%)',
-      power: 'Potenza Netta (kW)',
-      wt: 'Lavoro Turbina (kJ/kg)',
-      wp: 'Lavoro Pompa (kJ/kg)',
-      wc: 'Lavoro Compressore (kJ/kg)',
-      q_in: 'Calore Ingresso (kJ/kg)',
-      q_out: 'Calore Uscita (kJ/kg)',
-      bwr: 'Back Work Ratio (%)',
-      cop: 'COP Frigorifero',
-      cop_hp: 'COP Pompa di Calore',
-      cooling_cap: 'Capacità Frigorifera (kW)',
-      qlow: 'Calore Basso (kJ/kg)',
-      qhigh: 'Calore Alto (kJ/kg)',
-      win: 'Lavoro Compressore (kJ/kg)',
-      Q_in: 'Calore Ingresso (kJ/kg)',
-      Q_out: 'Calore Uscita (kJ/kg)',
-      W_net: 'Lavoro Netto (kJ/kg)',
-    };
-    const label = labels[key] || key;
     const formatted = typeof val === 'number' ? val.toFixed(2) : val;
-    pdf.text(`${label}: ${formatted}`, margin + 2, y);
+    pdf.text(`${statLabels[key] || key}: ${formatted}`, margin + 2, y);
     y += 5;
   }
   y += 4;
 
-  // --- DIAGRAMS (screenshots) ---
   const captureElement = async (ref, name) => {
     if (!ref?.current) return null;
     try {
-      const canvas = await html2canvas(ref.current, {
+      return await html2canvas(ref.current, {
         backgroundColor: '#0B1120',
         scale: 2,
         useCORS: true,
         logging: false,
       });
-      return canvas;
-    } catch (err) {
-      console.warn(`Failed to capture ${name}:`, err);
+    } catch (error) {
+      console.warn(`Failed to capture ${name}:`, error);
       return null;
     }
   };
 
   for (const [name, ref] of Object.entries(plotRefs)) {
     const canvas = await captureElement(ref, name);
-    if (canvas) {
-      checkSpace(90);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(12);
-      pdf.setTextColor(30);
-      const diagramLabels = {
-        ts: 'Diagramma T-s',
-        pv: 'Diagramma P-v',
-        hs: 'Diagramma h-s (Mollier)',
-        ph: 'Diagramma P-h',
-      };
-      pdf.text(diagramLabels[name] || name, margin, y);
-      y += 5;
+    if (!canvas) continue;
 
-      const imgData = canvas.toDataURL('image/png');
-      const imgW = contentW;
-      const imgH = (canvas.height / canvas.width) * imgW;
-      const finalH = Math.min(imgH, 80);
-      const finalW = (finalH / imgH) * imgW;
-      pdf.addImage(imgData, 'PNG', margin, y, finalW, finalH);
-      y += finalH + 6;
-    }
+    checkSpace(90);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(30);
+    const diagramLabels = {
+      ts: 'Diagramma T-s',
+      pv: 'Diagramma P-v',
+      hs: 'Diagramma h-s (Mollier)',
+      ph: 'Diagramma P-h',
+    };
+    pdf.text(diagramLabels[name] || name, margin, y);
+    y += 5;
+
+    const imgData = canvas.toDataURL('image/png');
+    const imgW = contentW;
+    const imgH = (canvas.height / canvas.width) * imgW;
+    const finalH = Math.min(imgH, 80);
+    const finalW = (finalH / imgH) * imgW;
+    pdf.addImage(imgData, 'PNG', margin, y, finalW, finalH);
+    y += finalH + 6;
   }
 
-  // Capture schematic
   if (schematicRef?.current) {
     const canvas = await captureElement(schematicRef, 'schematic');
     if (canvas) {
@@ -200,7 +198,6 @@ export const exportToPDF = async ({
     }
   }
 
-  // --- COORDINATE TABLE ---
   if (points.length > 0) {
     checkSpace(50);
     pdf.line(margin, y, pageW - margin, y);
@@ -212,49 +209,47 @@ export const exportToPDF = async ({
     y += 8;
 
     const colW = [22, 28, 28, 30, 30, 28];
-    const headers = ['Punto', 'T (°C)', 'P (bar)', 'h (kJ/kg)', 's (kJ/kg·K)', 'v (m³/kg)'];
+    const headers = ['Punto', 'T (C)', 'P (bar)', 'h (kJ/kg)', 's (kJ/kg K)', 'v (m^3/kg)'];
 
-    // Header row
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(8);
     pdf.setTextColor(255);
     pdf.setFillColor(...hexToRgb(accentColor));
     pdf.rect(margin, y - 4, contentW, 7, 'F');
+
     let x = margin + 2;
-    headers.forEach((h, i) => {
-      pdf.text(h, x, y);
-      x += colW[i];
+    headers.forEach((header, index) => {
+      pdf.text(header, x, y);
+      x += colW[index];
     });
     y += 6;
 
-    // Data rows
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
     pdf.setTextColor(40);
-    points.forEach((pt, i) => {
-      if (i % 2 === 0) {
+    points.forEach((point, index) => {
+      if (index % 2 === 0) {
         pdf.setFillColor(245);
         pdf.rect(margin, y - 4, contentW, 6, 'F');
       }
       x = margin + 2;
       const row = [
-        pt.label || `${i + 1}`,
-        fmtPDF(pt.t),
-        fmtPDF(pt.p),
-        fmtPDF(pt.h),
-        fmtPDF(pt.s),
-        fmtPDF(pt.v),
+        point.label || `${index + 1}`,
+        fmtPDF(point.t),
+        fmtPDF(point.p),
+        fmtPDF(point.h),
+        fmtPDF(point.s),
+        fmtPDF(point.v),
       ];
-      row.forEach((val, j) => {
+      row.forEach((val, colIndex) => {
         pdf.text(String(val), x, y);
-        x += colW[j];
+        x += colW[colIndex];
       });
       y += 6;
     });
     y += 4;
   }
 
-  // --- FORMULAS ---
   if (formulas.length > 0) {
     checkSpace(40);
     pdf.line(margin, y, pageW - margin, y);
@@ -268,38 +263,38 @@ export const exportToPDF = async ({
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
     pdf.setTextColor(40);
-    formulas.forEach((f) => {
+
+    formulas.forEach((formula) => {
       checkSpace(12);
-      if (f.label) {
+      if (formula.label) {
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(9);
-        pdf.text(f.label, margin + 2, y);
+        pdf.text(formula.label, margin + 2, y);
         y += 5;
         pdf.setFont('helvetica', 'normal');
       }
-      const text = f.latex
+
+      const text = formula.latex
         .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')
-        .replace(/\\cdot/g, '·')
-        .replace(/\\Delta/g, 'Δ')
-        .replace(/\\eta/g, 'η')
-        .replace(/\\alpha/g, 'α')
-        .replace(/\\beta/g, 'β')
-        .replace(/\\gamma/g, 'γ')
-        .replace(/\\theta/g, 'θ')
-        .replace(/\\pi/g, 'π')
-        .replace(/\\sigma/g, 'σ')
-        .replace(/\\infty/g, '∞')
+        .replace(/\\cdot/g, '*')
+        .replace(/\\Delta/g, 'Delta')
+        .replace(/\\eta/g, 'eta')
+        .replace(/\\alpha/g, 'alpha')
+        .replace(/\\beta/g, 'beta')
+        .replace(/\\gamma/g, 'gamma')
+        .replace(/\\theta/g, 'theta')
+        .replace(/\\pi/g, 'pi')
+        .replace(/\\sigma/g, 'sigma')
+        .replace(/\\infty/g, 'infinity')
         .replace(/\\left|\\right/g, '')
-        .replace(/[{}\\]/g, '')
-        .replace(/_/g, '_')
-        .replace(/\^/g, '^');
-      const valText = f.value !== undefined ? ` = ${typeof f.value === 'number' ? f.value.toFixed(2) : f.value}` : '';
-      pdf.text(`${text}${valText}`, margin + 4, y);
+        .replace(/[{}\\]/g, '');
+      const valueText = formula.value !== undefined
+        ? ` = ${typeof formula.value === 'number' ? formula.value.toFixed(2) : formula.value}`
+        : '';
+      pdf.text(`${text}${valueText}`, margin + 4, y);
       y += 6;
     });
   }
 
-  // Save
   pdf.save(`Ciclo_${title.replace(/\s+/g, '_')}_ThermoHub.pdf`);
 };
 
@@ -310,10 +305,10 @@ function hexToRgb(hex) {
     : [56, 189, 248];
 }
 
-function fmtPDF(v) {
-  if (v === undefined || v === null || !Number.isFinite(v)) return '—';
-  if (Math.abs(v) >= 1000) return v.toFixed(1);
-  if (Math.abs(v) >= 100) return v.toFixed(2);
-  if (Math.abs(v) >= 1) return v.toFixed(3);
-  return v.toExponential(2);
+function fmtPDF(value) {
+  if (value === undefined || value === null || !Number.isFinite(value)) return '-';
+  if (Math.abs(value) >= 1000) return value.toFixed(1);
+  if (Math.abs(value) >= 100) return value.toFixed(2);
+  if (Math.abs(value) >= 1) return value.toFixed(3);
+  return value.toExponential(2);
 }

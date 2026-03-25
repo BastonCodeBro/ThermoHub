@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import React, { useId } from 'react';
 
 const InputField = ({ label, value, onChange, type = 'number', step, min, max, unit, accent = '#38BDF8' }) => {
   const inputId = useId();

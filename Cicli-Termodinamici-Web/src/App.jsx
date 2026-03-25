@@ -1,9 +1,9 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Zap, Flame, Snowflake, RotateCw, Wind } from 'lucide-react';
 import Layout from './components/Layout';
 import Hero from './components/Hero';
 import CycleCard from './components/CycleCard';
-import { Zap, Flame, Snowflake, RotateCw, Wind } from 'lucide-react';
 
 const RankinePage = React.lazy(() => import('./components/RankinePage'));
 const BraytonPage = React.lazy(() => import('./components/BraytonPage'));
@@ -11,49 +11,57 @@ const OttoPage = React.lazy(() => import('./components/OttoPage'));
 const DieselPage = React.lazy(() => import('./components/DieselPage'));
 const RefrigerationPage = React.lazy(() => import('./components/RefrigerationPage'));
 const CarnotPage = React.lazy(() => import('./components/CarnotPage'));
+const SteamLabPage = React.lazy(() => import('./components/SteamLabPage'));
 
 const cycles = [
   {
-    title: "Ciclo Rankine",
-    id: "rankine",
-    description: "Il cuore delle centrali a vapore. Analizza vaporizzazione, espansione e condensazione con i dati IAPWS-97.",
+    title: 'Ciclo Rankine',
+    id: 'rankine',
+    description: 'Il cuore delle centrali a vapore. Analizza vaporizzazione, espansione e condensazione con i dati IAPWS-97.',
     Icon: Flame,
     color: '#38BDF8',
   },
   {
-    title: "Ciclo Brayton",
-    id: "brayton",
-    description: "Turbine a gas e motori aeronautici. Calcola rendimenti con compressore e turbina reali.",
+    title: 'Ciclo Brayton',
+    id: 'brayton',
+    description: 'Turbine a gas e motori aeronautici. Calcola rendimenti con compressore e turbina reali.',
     Icon: Wind,
     color: '#818CF8',
   },
   {
-    title: "Ciclo Otto",
-    id: "otto",
-    description: "Motore a accensione comandata (benzina). Analizza compressione e combustione isocora.",
+    title: 'Ciclo Otto',
+    id: 'otto',
+    description: 'Motore a accensione comandata (benzina). Analizza compressione e combustione isocora.',
     Icon: Zap,
     color: '#FCD34D',
   },
   {
-    title: "Ciclo Diesel",
-    id: "diesel",
+    title: 'Ciclo Diesel',
+    id: 'diesel',
     description: "Motore a accensione spontanea. Varia il rapporto di combustione e osserva l'effetto sul rendimento.",
     Icon: Flame,
     color: '#EF4444',
   },
   {
-    title: "Ciclo Frigorifero",
-    id: "frigo",
-    description: "Refrigerazione a compressione di vapore con R134a. Calcola COP e capacità frigorifera.",
+    title: 'Ciclo Frigorifero',
+    id: 'frigo',
+    description: 'Refrigerazione a compressione di vapore con R134a. Calcola COP e capacita frigorifera.',
     Icon: Snowflake,
     color: '#10B981',
   },
   {
-    title: "Ciclo Carnot",
-    id: "carnot",
-    description: "Il ciclo ideale di riferimento. Il rendimento massimo teoricamente raggiungibile tra due temperature.",
+    title: 'Ciclo Carnot',
+    id: 'carnot',
+    description: 'Il ciclo ideale di riferimento. Il rendimento massimo teoricamente raggiungibile tra due temperature.',
     Icon: RotateCw,
     color: '#A78BFA',
+  },
+  {
+    title: 'Laboratorio Vapore',
+    id: 'laboratorio-vapore',
+    description: 'Porta nel web il flusso avanzato del tool desktop: costruzione manuale stati e percorso su diagrammi.',
+    Icon: Flame,
+    color: '#38BDF8',
   },
 ];
 
@@ -114,6 +122,10 @@ function App() {
         <Route
           path="carnot"
           element={<React.Suspense fallback={null}><CarnotPage /></React.Suspense>}
+        />
+        <Route
+          path="laboratorio-vapore"
+          element={<React.Suspense fallback={null}><SteamLabPage /></React.Suspense>}
         />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

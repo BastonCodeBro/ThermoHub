@@ -1,11 +1,23 @@
 import { solveFluid } from './waterProps';
+import { generateIdealGasPath } from './idealGas';
 
 /**
- * Sample thermodynamic states along the process connecting pt1 → pt2 (real fluid).
- * Classification mirrors calcolatore_acqua.generate_path (IAPWS97).
- * Units: p bar, T °C, h kJ/kg, s kJ/kg·K, v m³/kg
+ * Sample thermodynamic states along the process connecting pt1 -> pt2.
+ * Units: p bar, T C, h kJ/kg, s kJ/(kg K), v m^3/kg
  */
-export async function generateProcessPath(pt1, pt2, fluid = 'Water', numPoints = 48) {
+export async function generateProcessPath(pt1, pt2, fluid = 'Water', numPoints = 48, options = {}) {
+  if (typeof numPoints === 'object' && numPoints !== null) {
+    options = numPoints;
+    numPoints = options.numPoints ?? 48;
+  }
+
+  if (fluid === 'Air' || options.model === 'ideal-gas') {
+    return generateIdealGasPath(pt1, pt2, options.processType ?? 'auto', {
+      n: numPoints,
+      nExp: options.nExp,
+    });
+  }
+
   const dp = pt2.p - pt1.p;
   const ds = pt2.s - pt1.s;
   const dh = pt2.h - pt1.h;
@@ -24,7 +36,7 @@ export async function generateProcessPath(pt1, pt2, fluid = 'Water', numPoints =
 
   try {
     if (isIsobaric) {
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < n; i += 1) {
         const t = i / (n - 1);
         const h = pt1.h + (pt2.h - pt1.h) * t;
         states.push(await solveFluid({ p: pt1.p, h }, fluid));
@@ -42,31 +54,31 @@ export async function generateProcessPath(pt1, pt2, fluid = 'Water', numPoints =
         states.push(await solveFluid({ p, s: pt1.s }, fluid));
       }
     } else if (isIsenthalpic) {
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < n; i += 1) {
         const t = i / (n - 1);
         const p = pt1.p + (pt2.p - pt1.p) * t;
         states.push(await solveFluid({ p, h: pt1.h }, fluid));
       }
     } else if (isIsochoric) {
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < n; i += 1) {
         const t = i / (n - 1);
         const p = pt1.p + (pt2.p - pt1.p) * t;
         states.push(await solveFluid({ p, v: pt1.v }, fluid));
       }
     } else {
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < n; i += 1) {
         const t = i / (n - 1);
         const p = pt1.p + (pt2.p - pt1.p) * t;
         const h = pt1.h + (pt2.h - pt1.h) * t;
         states.push(await solveFluid({ p, h }, fluid));
       }
     }
-  } catch (e) {
-    console.warn('generateProcessPath: fallback to endpoints', e);
-    return [pt1, pt2];
+  } catch (error) {
+    console.warn('generateProcessPath: fallback to endpoints', error);
+    return [{ ...pt1 }, { ...pt2 }];
   }
 
-  if (states.length < 2) return [pt1, pt2];
+  if (states.length < 2) return [{ ...pt1 }, { ...pt2 }];
 
   states[0] = { ...pt1 };
   states[states.length - 1] = { ...pt2 };

@@ -1,85 +1,77 @@
-# Thermodynamic Cycles - Web Suite ⚡ / Cicli Termodinamici
+# Cicli Termodinamici
 
-*Creato dal **Prof. Ing. Andrea Viola** | Created by **Prof. Ing. Andrea Viola***
-*Per scopi didattici | For educational purposes only*
+Repository web-first per il sito React/Vite deployato su Vercel.
 
----
+This repository is organized primarily for the React/Vite web application deployed on Vercel.
 
-## 🇬🇧 English
+Stato verificato localmente il **2026-03-25**.
 
-An interactive educational web application for teaching and studying ideal and real thermodynamic cycles.
+## Layout Attuale
 
-### Features
-- **💧 Rankine Cycle (Steam/Water)**: IAPWS-IF97 analysis, saturation dome, vapor quality
-- **🔥 Brayton Cycle (Gas Turbine)**: Compressor, combustion, turbine, BWR analysis
-- **⚙️ Otto Cycle**: Spark ignition engine with P-v/T-s diagrams
-- **🛢️ Diesel Cycle**: Compression ignition engine with P-v/T-s diagrams  
-- **❄️ Refrigeration Cycle**: R134a with COP analysis (evaporation/condensation)
-- **🔄 Carnot Cycle**: Ideal cycle comparison with efficiency calculation
-- **🎨 Air Laboratory**: Free-form construction of complex cycles with multi-phase support
+- `Cicli-Termodinamici-Web/`
+  applicazione web attiva
+- `docs/`
+  documentazione tecnica
+- `legacy/python-desktop/`
+  codice desktop storico isolato dal runtime del sito
+- `vercel.json`
+  configurazione di deploy del repository
 
-### Advanced Features
-- **Parametric Analysis**: Sweep parameter (e.g., compression ratio r) vs efficiency
-- **Cycle Comparison**: Overlay multiple cycles on T-s diagram
-- **Export**: PDF reports + CSV data + PNG charts
-- **i18n**: Automatic English/Italian translation based on browser language
+## Prodotto Principale
 
-### Installation
-```bash
-git clone https://github.com/TUO_NOME_UTENTE/cicli_termodinamici.git
-cd cicli_termodinamici/Cicli-Termodinamici-Web
+Il deliverable principale e il sito in `Cicli-Termodinamici-Web/`.
+
+Funzionalita principali:
+
+- pagine ciclo per Rankine, Brayton, Otto, Diesel, Frigorifero e Carnot
+- `Laboratorio Vapore` per la costruzione manuale di stati acqua-vapore nel browser
+- diagrammi interattivi con Plotly
+- proprieta termodinamiche con `coolprop-wasm`
+- export PDF on-demand
+
+## Avvio Locale
+
+```powershell
+cd Cicli-Termodinamici-Web
 npm install
 npm run dev
-
 ```
 
-### Deploy
-Deploy to Vercel by connecting your GitHub repository.
+## Verifiche Correnti
 
----
+Controlli rieseguiti il **2026-03-25**:
 
-## 🇮🇹 Italiano
+- `npm run lint` -> passed
+- `npm run test` -> passed
+- `npm run build` -> passed
 
-Suite software didattica e interattiva per l'insegnamento e lo studio dei cicli termodinamici.
+## Deploy
 
-Funzionalità
-💧 Ciclo Rankine (Acqua/Vapore): Analisi IAPWS-IF97, cupola di saturazione
-🔥 Ciclo Brayton (Turbina a Gas): Compressore, combustione, turbina, BWR
-⚙️ Ciclo Otto: Motore ad accensione comandata con diagrammi P-v/T-s
-🛢️ Ciclo Diesel: Motore ad accensione per compressione
-❄️ Ciclo Frigorifero: R134a con analisi COP
-🔄 Ciclo Carnot: Ciclo ideale con confronto rendimento
-🎨 Laboratorio Aria: Costruzione libera di cicli complessi
-Funzionalità Avanzate
-Analisi Parametrica: Sweep parametri (es. r vs η)
-Confronto Cicli: Sovrapponi più cicli su diagramma T-s
-Esportazione: Report PDF + dati CSV + immagini PNG
-i18n: Traduzione automatica italiano/inglese
+Il deploy Vercel usa `vercel.json` alla radice e costruisce:
 
-## 📂 Struttura del Progetto / Project Structure
+- `Cicli-Termodinamici-Web/dist`
 
-```
-├── Cicli-Termodinamici-Web/   # App web React/Vite
-│   ├── src/                   # Sorgenti React
-│   ├── public/                # Asset statici
-│   ├── package.json           # Dipendenze npm
-│   └── vite.config.js         # Configurazione Vite
-├── calcolatore_*.py           # Moduli desktop / Desktop modules
-├── cicli_termodinamici.py     # Launcher desktop unificato
-├── core/                      # Core thermodynamics
-│   ├── thermo.py              # GasPoint, Steam, R134a tables
-│   └── cycles/                # Cycle calculations
-│       ├── otto.py
-│       ├── diesel.py
-│       ├── brayton.py
-│       ├── frigo.py
-│       └── carnot.py
-├── requirements.txt           # Dipendenze Python / Python Dependencies
-├── vercel.json                # Configurazione Vercel
-└── README.md
-```
+Non e presente Streamlit nel repository e il deploy del sito non richiede runtime Python.
 
----
+## Legacy Python
 
-## 📝 Licenza / License
-Progetto rilasciato sotto licenza MIT - sentiti libero di usarlo e modificarlo per la didattica!
+Il codice desktop storico e stato spostato in:
+
+- `legacy/python-desktop/`
+
+Include:
+
+- GUI `customtkinter`
+- core Python storico
+- launcher `.bat`
+- dipendenze in `legacy/python-desktop/requirements-desktop.txt`
+
+Il legacy resta disponibile come riferimento, ma non fa parte del runtime del sito.
+
+## Documentazione
+
+- [README web](Cicli-Termodinamici-Web/README.md)
+- [Uso web](docs/USO_WEB.md)
+- [Architettura](docs/ARCHITETTURA.md)
+- [Manutenzione e miglioramenti](docs/MANUTENZIONE_E_MIGLIORAMENTI.md)
+- [Uso desktop legacy](docs/USO_DESKTOP.md)
