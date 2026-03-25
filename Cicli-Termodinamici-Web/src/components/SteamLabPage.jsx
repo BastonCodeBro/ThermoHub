@@ -271,7 +271,7 @@ const SteamLabPage = () => {
             markerSize: 9,
           }),
         ].filter(Boolean);
-        const layout = plotLayout('Entropia s (kJ/kg K)', 'Temperatura T (C)');
+        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Temperatura T (°C)');
         layout.annotations = pointAnnotations(points, (point) => point.s, (point) => point.t);
         renderPlot(node, data, layout, plotConfig);
       } else if (activeTab === 1) {
@@ -297,7 +297,7 @@ const SteamLabPage = () => {
             markerSize: 9,
           }),
         ].filter(Boolean);
-        const layout = plotLayout('Entropia s (kJ/kg K)', 'Entalpia h (kJ/kg)');
+        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
         layout.annotations = pointAnnotations(points, (point) => point.s, (point) => point.h);
         renderPlot(node, data, layout, plotConfig);
       } else {
@@ -323,7 +323,7 @@ const SteamLabPage = () => {
             markerSize: 9,
           }),
         ].filter(Boolean);
-        const layout = plotLayout('Volume specifico v (m^3/kg)', 'Pressione P (bar)', {
+        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
           xaxis: { type: 'log' },
           yaxis: { type: 'log' },
         });

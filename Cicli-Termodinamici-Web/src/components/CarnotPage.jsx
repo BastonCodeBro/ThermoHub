@@ -88,7 +88,7 @@ const CarnotPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Entropia s (kJ/kg K)', 'Temperatura T (C)');
+        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Temperatura T (°C)');
         layout.annotations = pointAnnotations(
           pts.map((p) => ({ x: p.s, y: p.t })),
           ['1\nIsoterma TH', '2\nAdiabatica', '3\nIsoterma TL', '4\nAdiabatica'],
@@ -111,7 +111,7 @@ const CarnotPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Volume specifico v (m^3/kg)', 'Pressione P (bar)', {
+        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
           xaxis: { type: 'log' },
           yaxis: { type: 'log' },
         });
@@ -133,7 +133,7 @@ const CarnotPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Entropia s (kJ/kg K)', 'Entalpia h (kJ/kg)');
+        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
         layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
         renderPlot(node, data, layout, plotConfig);
       }

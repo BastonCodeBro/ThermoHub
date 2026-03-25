@@ -118,7 +118,7 @@ const BraytonPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Entropia s (kJ/kg K)', 'Temperatura T (C)');
+        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Temperatura T (°C)');
         layout.annotations = pointAnnotations(
           realPts.map((p) => ({ x: p.s, y: p.t })),
           ['1\nAspirazione', '2\nCompressore', '3\nCombustore', '4\nTurbina'],
@@ -142,7 +142,7 @@ const BraytonPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Volume specifico v (m^3/kg)', 'Pressione P (bar)', {
+        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
           xaxis: { type: 'log' },
           yaxis: { type: 'log' },
         });
@@ -165,7 +165,7 @@ const BraytonPage = () => {
             markerSize: 10,
           }),
         ];
-        const layout = plotLayout('Entropia s (kJ/kg K)', 'Entalpia h (kJ/kg)');
+        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
         layout.annotations = pointAnnotations(realPts.map((p) => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
         renderPlot(node, data, layout, plotConfig);
       }

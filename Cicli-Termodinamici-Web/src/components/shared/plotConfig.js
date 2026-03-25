@@ -3,6 +3,12 @@ const CV_AIR = 0.718;
 
 export const plotLayout = (xTitle, yTitle, extra = {}) => {
   const { xaxis: extraX, yaxis: extraY, ...rest } = extra;
+  const logTickDefaults = {
+    dtick: 1,
+    tickformat: '.1e',
+    exponentformat: 'e',
+    showexponent: 'all',
+  };
   return {
     autosize: true,
     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -12,6 +18,7 @@ export const plotLayout = (xTitle, yTitle, extra = {}) => {
       gridcolor: '#1E293B',
       color: '#94A3B8',
       zerolinecolor: '#334155',
+      ...(extraX?.type === 'log' ? logTickDefaults : {}),
       ...extraX,
     },
     yaxis: {
@@ -19,6 +26,7 @@ export const plotLayout = (xTitle, yTitle, extra = {}) => {
       gridcolor: '#1E293B',
       color: '#94A3B8',
       zerolinecolor: '#334155',
+      ...(extraY?.type === 'log' ? logTickDefaults : {}),
       ...extraY,
     },
     margin: { t: 30, r: 20, b: 50, l: 60 },

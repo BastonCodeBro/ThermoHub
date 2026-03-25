@@ -147,7 +147,7 @@ const RankinePage = () => {
           }),
         ].filter(Boolean);
 
-        const layout = plotLayout('Entropia s (kJ/kg K)', 'Temperatura T (C)');
+        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Temperatura T (°C)');
         layout.annotations = [
           ...pointAnnotations(
             results.actualPoints.map((point) => ({ x: point.s, y: point.t })),
@@ -229,7 +229,7 @@ const RankinePage = () => {
           }),
         ].filter(Boolean);
 
-        const layout = plotLayout('Entropia s (kJ/kg K)', 'Entalpia h (kJ/kg)');
+        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
         layout.annotations = [
           ...pointAnnotations(
             results.actualPoints.map((point) => ({ x: point.s, y: point.h })),
@@ -311,7 +311,7 @@ const RankinePage = () => {
           }),
         ].filter(Boolean);
 
-        const layout = plotLayout('Volume specifico v (m^3/kg)', 'Pressione P (bar)', {
+        const layout = plotLayout('Volume specifico v (m³/kg)', 'Pressione P (bar)', {
           xaxis: { type: 'log' },
           yaxis: { type: 'log' },
         });
@@ -567,16 +567,17 @@ const RankinePage = () => {
         { label: 'Punto 3', latex: 'P_3 = P_{high}, \\quad T_3 = T_{max}' },
         { label: 'Punto 4s', latex: 's_{4s} = s_3, \\quad P_{4s} = P_{low}' },
         { label: 'Punto 4 reale', latex: 'h_4 = h_3 - \\eta_t (h_3 - h_{4s})' },
-        { label: 'Lavoro turbina', latex: 'w_t = h_3 - h_4', value: results.stats.wt },
-        { label: 'Lavoro pompa', latex: 'w_p = h_2 - h_1', value: results.stats.wp },
-        { label: 'Calore fornito', latex: 'q_{in} = h_3 - h_2', value: results.stats.q_in },
+        { label: 'Lavoro turbina', latex: 'w_t = h_3 - h_4', value: results.stats.wt, unit: 'kJ/kg' },
+        { label: 'Lavoro pompa', latex: 'w_p = h_2 - h_1', value: results.stats.wp, unit: 'kJ/kg' },
+        { label: 'Calore fornito', latex: 'q_{in} = h_3 - h_2', value: results.stats.q_in, unit: 'kJ/kg' },
         {
           label: 'Rendimento ciclo',
           latex: '\\eta = \\frac{w_t - w_p}{q_{in}} \\times 100',
           value: results.stats.eta,
+          unit: '%',
           display: true,
         },
-        { label: 'Potenza netta', latex: '\\dot{W}_{net} = \\dot{m}(w_t - w_p)', value: results.stats.power },
+        { label: 'Potenza netta', latex: '\\dot{W}_{net} = \\dot{m}(w_t - w_p)', value: results.stats.power, unit: 'kW' },
       ]}
     />
   ) : null;
@@ -628,13 +629,13 @@ const RankinePage = () => {
           label="Temperatura massima"
           value={inputs.t_max}
           onChange={(value) => setInputs({ ...inputs, t_max: value })}
-          unit="C"
+          unit="°C"
           accent={COLOR}
         />
       </div>
       <div className="inputs-row">
         <InputField
-          label="eta turbina"
+          label="Rend. Isentropico Turbina (ηt)"
           value={inputs.eta_t}
           onChange={(value) => setInputs({ ...inputs, eta_t: value })}
           step={0.01}
@@ -643,7 +644,7 @@ const RankinePage = () => {
           accent={COLOR}
         />
         <InputField
-          label="eta pompa"
+          label="Rend. Isentropico Pompa (ηp)"
           value={inputs.eta_p}
           onChange={(value) => setInputs({ ...inputs, eta_p: value })}
           step={0.01}

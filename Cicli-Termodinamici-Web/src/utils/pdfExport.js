@@ -317,8 +317,11 @@ function hexToRgb(hex) {
 
 function fmtPDF(value) {
   if (value === undefined || value === null || !Number.isFinite(value)) return '-';
-  if (Math.abs(value) >= 1000) return value.toFixed(1);
-  if (Math.abs(value) >= 100) return value.toFixed(2);
-  if (Math.abs(value) >= 1) return value.toFixed(3);
-  return value.toExponential(2);
+  const a = Math.abs(value);
+  if (a >= 1000) return value.toFixed(1);
+  if (a >= 100) return value.toFixed(2);
+  if (a >= 1) return value.toFixed(3);
+  if (a >= 0.01) return value.toFixed(4);
+  if (a >= 0.001) return value.toFixed(5);
+  return value.toFixed(6);
 }

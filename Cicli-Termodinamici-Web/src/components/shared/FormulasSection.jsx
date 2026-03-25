@@ -29,14 +29,17 @@ const KaTeX = ({ math, display = false, color }) => {
 const FormulasSection = ({ points, formulas, coordTitle = 'Coordinate Termodinamiche', accentColor = '#38BDF8' }) => {
   if (!points || points.length === 0) return null;
 
-  const headers = ['Punto', 'T (°C)', 'P (bar)', 'h (kJ/kg)', 's (kJ/kg·K)', 'v (m³/kg)'];
+  const headers = ['Punto', 'T (°C)', 'P (bar)', 'h (kJ/kg)', 's (kJ/(kg·K))', 'v (m³/kg)'];
   const fmt = (v) => {
     if (v === undefined || v === null || !Number.isFinite(v)) return '—';
-    if (Math.abs(v) >= 1000) return v.toFixed(1);
-    if (Math.abs(v) >= 100) return v.toFixed(2);
-    if (Math.abs(v) >= 10) return v.toFixed(3);
-    if (Math.abs(v) >= 1) return v.toFixed(4);
-    return v.toExponential(3);
+    const a = Math.abs(v);
+    if (a >= 1000) return v.toFixed(1);
+    if (a >= 100) return v.toFixed(2);
+    if (a >= 10) return v.toFixed(3);
+    if (a >= 1) return v.toFixed(4);
+    if (a >= 0.01) return v.toFixed(4);
+    if (a >= 0.001) return v.toFixed(5);
+    return v.toFixed(6);
   };
 
   return (
@@ -79,7 +82,11 @@ const FormulasSection = ({ points, formulas, coordTitle = 'Coordinate Termodinam
                 )}
                 <KaTeX math={f.latex} display={!!f.display} color={accentColor} />
                 {f.value !== undefined && (
-                  <span className="formula-value"> = {typeof f.value === 'number' ? f.value.toFixed(2) : f.value}</span>
+                  <span className="formula-value">
+                    {' = '}
+                    {typeof f.value === 'number' ? f.value.toFixed(2) : f.value}
+                    {f.unit && ` ${f.unit}`}
+                  </span>
                 )}
               </div>
             ))}
