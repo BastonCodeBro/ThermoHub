@@ -27,13 +27,14 @@ An interactive educational web application for teaching and studying ideal and r
 ### Installation
 ```bash
 git clone https://github.com/TUO_NOME_UTENTE/cicli_termodinamici.git
-cd cicli_termodinamici
-pip install -r requirements.txt
-streamlit run streamlit_app.py
+cd cicli_termodinamici/Cicli-Termodinamici-Web
+npm install
+npm run dev
+
 ```
 
 ### Deploy
-Deploy to [Streamlit Community Cloud](https://share.streamlit.io/) by selecting `streamlit_app.py` as the main file.
+Deploy to Vercel by connecting your GitHub repository.
 
 ---
 
@@ -41,52 +42,40 @@ Deploy to [Streamlit Community Cloud](https://share.streamlit.io/) by selecting 
 
 Suite software didattica e interattiva per l'insegnamento e lo studio dei cicli termodinamici.
 
-### Funzionalità
-- **💧 Ciclo Rankine (Acqua/Vapore)**: Analisi IAPWS-IF97, cupola di saturazione
-- **🔥 Ciclo Brayton (Turbina a Gas)**: Compressore, combustione, turbina, BWR
-- **⚙️ Ciclo Otto**: Motore ad accensione comandata con diagrammi P-v/T-s
-- **🛢️ Ciclo Diesel**: Motore ad accensione per compressione
-- **❄️ Ciclo Frigorifero**: R134a con analisi COP
-- **🔄 Ciclo Carnot**: Ciclo ideale con confronto rendimento
-- **🎨 Laboratorio Aria**: Costruzione libera di cicli complessi
-
-### Funzionalità Avanzate
-- **Analisi Parametrica**: Sweep parametri (es. r vs η)
-- **Confronto Cicli**: Sovrapponi più cicli su diagramma T-s
-- **Esportazione**: Report PDF + dati CSV + immagini PNG
-- **i18n**: Traduzione automatica italiano/inglese
-
-### Installazione
-```bash
-git clone https://github.com/TUO_NOME_UTENTE/cicli_termodinamici.git
-cd cicli_termodinamici
-pip install -r requirements.txt
-streamlit run streamlit_app.py
-```
-
-### Deploy
-Esegui il deploy su [Streamlit Community Cloud](https://share.streamlit.io/) selezionando `streamlit_app.py` come file principale.
-
----
+Funzionalità
+💧 Ciclo Rankine (Acqua/Vapore): Analisi IAPWS-IF97, cupola di saturazione
+🔥 Ciclo Brayton (Turbina a Gas): Compressore, combustione, turbina, BWR
+⚙️ Ciclo Otto: Motore ad accensione comandata con diagrammi P-v/T-s
+🛢️ Ciclo Diesel: Motore ad accensione per compressione
+❄️ Ciclo Frigorifero: R134a con analisi COP
+🔄 Ciclo Carnot: Ciclo ideale con confronto rendimento
+🎨 Laboratorio Aria: Costruzione libera di cicli complessi
+Funzionalità Avanzate
+Analisi Parametrica: Sweep parametri (es. r vs η)
+Confronto Cicli: Sovrapponi più cicli su diagramma T-s
+Esportazione: Report PDF + dati CSV + immagini PNG
+i18n: Traduzione automatica italiano/inglese
 
 ## 📂 Struttura del Progetto / Project Structure
 
 ```
-├── streamlit_app.py          # Web App principale / Main Web App
-├── calcolatore_*.py          # Moduli desktop / Desktop modules
+├── Cicli-Termodinamici-Web/   # App web React/Vite
+│   ├── src/                   # Sorgenti React
+│   ├── public/                # Asset statici
+│   ├── package.json           # Dipendenze npm
+│   └── vite.config.js         # Configurazione Vite
+├── calcolatore_*.py           # Moduli desktop / Desktop modules
 ├── cicli_termodinamici.py     # Launcher desktop unificato
 ├── core/                      # Core thermodynamics
-│   ├── thermo.py             # GasPoint, Steam, R134a tables
-│   └── cycles/               # Cycle calculations
+│   ├── thermo.py              # GasPoint, Steam, R134a tables
+│   └── cycles/                # Cycle calculations
 │       ├── otto.py
 │       ├── diesel.py
 │       ├── brayton.py
 │       ├── frigo.py
 │       └── carnot.py
-├── components/                # UI components
-├── config/                    # Theme configuration
-├── translations/              # i18n JSON files
-├── requirements.txt           # Dipendenze / Dependencies
+├── requirements.txt           # Dipendenze Python / Python Dependencies
+├── vercel.json                # Configurazione Vercel
 └── README.md
 ```
 
