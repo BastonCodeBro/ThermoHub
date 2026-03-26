@@ -1104,3 +1104,427 @@ p { margin: 0; }
   background: #1E293B;
   border-radius: 2px;
 }
+
+/* ================================================================
+   Fluid Power Lab
+   ================================================================ */
+.fluid-page-description {
+  max-width: 760px;
+}
+
+.fluid-page-layout {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .fluid-page-layout {
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  }
+}
+
+.fluid-sidebar,
+.fluid-toolbar,
+.fluid-canvas-panel,
+.fluid-simulation-panel,
+.fluid-legend,
+.fluid-palette-card {
+  background: rgba(17, 24, 39, 0.78);
+}
+
+.fluid-sidebar {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  max-height: calc(100vh - 8rem);
+  overflow: auto;
+}
+
+.fluid-domain-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+.fluid-domain-tab {
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-dim);
+  border-radius: var(--radius);
+  padding: 0.85rem 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.fluid-domain-tab:hover,
+.fluid-domain-tab-active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fluid-legend {
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.fluid-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.fluid-legend-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.fluid-legend-dot-active {
+  background: #22D3EE;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.14);
+}
+
+.fluid-legend-dot-mechanical {
+  background: #94A3B8;
+}
+
+.fluid-palette-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.fluid-palette-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.fluid-palette-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.fluid-palette-card {
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.75rem;
+  cursor: grab;
+}
+
+.fluid-palette-card:active {
+  cursor: grabbing;
+}
+
+.fluid-palette-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fluid-palette-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.fluid-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.fluid-toolbar {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fluid-toolbar-actions,
+.fluid-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.fluid-toolbar-btn {
+  justify-content: center;
+}
+
+.fluid-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fluid-canvas-panel,
+.fluid-simulation-panel {
+  padding: 1rem;
+}
+
+.fluid-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 900px) {
+  .fluid-panel-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+}
+
+.fluid-message-banner {
+  max-width: 420px;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius);
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.16);
+  color: var(--text-dim);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.fluid-canvas {
+  position: relative;
+  width: 100%;
+  min-height: 640px;
+  overflow: auto;
+  border-radius: var(--radius-lg);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), transparent 40%),
+    #0B1120;
+  background-size: 24px 24px, 24px 24px, auto, auto;
+}
+
+.fluid-connections-layer {
+  position: absolute;
+  inset: 0;
+  width: 980px;
+  height: 640px;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.fluid-connection {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.85);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+.fluid-connection-active {
+  stroke: #22D3EE;
+  stroke-dasharray: 12 8;
+  animation: fluidFlow 1.6s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.3));
+}
+
+.fluid-connection-mechanical {
+  stroke: rgba(148, 163, 184, 0.95);
+  stroke-dasharray: 8 6;
+}
+
+.fluid-connection-selected {
+  stroke-width: 6;
+}
+
+@keyframes fluidFlow {
+  from { stroke-dashoffset: 40; }
+  to { stroke-dashoffset: 0; }
+}
+
+.fluid-node {
+  position: absolute;
+  padding: 0.65rem 0.75rem 0.55rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.35rem;
+  cursor: grab;
+  user-select: none;
+}
+
+.fluid-node:active {
+  cursor: grabbing;
+}
+
+.fluid-node-selected {
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.14);
+}
+
+.fluid-node-active {
+  border-color: rgba(34, 211, 238, 0.45);
+  box-shadow: 0 12px 30px rgba(8, 145, 178, 0.18);
+}
+
+.fluid-node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fluid-node-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.fluid-node-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fluid-node-toggle:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.fluid-symbol {
+  width: 100%;
+  height: 68px;
+}
+
+.fluid-port {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(226, 232, 240, 0.85);
+  background: #0F172A;
+  color: transparent;
+  padding: 0;
+  cursor: crosshair;
+}
+
+.fluid-port span {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fluid-port-active {
+  border-color: #22D3EE;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.14);
+}
+
+.fluid-port-pending {
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.14);
+}
+
+.fluid-empty-state {
+  width: 980px;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 2rem;
+}
+
+.fluid-simulation-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+
+.fluid-simulation-card {
+  padding: 1rem;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.fluid-warning-list {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.fluid-summary {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.fluid-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.fluid-summary-row span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .fluid-canvas {
+    min-height: 520px;
+  }
+
+  .fluid-connections-layer,
+  .fluid-empty-state {
+    width: 980px;
+    height: 640px;
+  }
+
+  .fluid-simulation-grid {
+    grid-template-columns: 1fr;
+  }
+}

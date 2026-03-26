@@ -10,6 +10,7 @@ const cycleLinks = [
   { to: '/frigo', label: 'Frigorifero' },
   { to: '/carnot', label: 'Carnot' },
   { to: '/laboratorio-vapore', label: 'Lab Vapore' },
+  { to: '/impianti-fluidici', label: 'Fluid Power' },
 ];
 
 const Navbar = () => {

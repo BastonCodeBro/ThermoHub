@@ -55,4 +55,17 @@ describe('App routes', () => {
       expect(screen.getByText(/Strumento derivato dal desktop/i)).toBeInTheDocument();
     });
   });
+
+  test('renders fluid power route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/impianti-fluidici']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Impianti Oleodinamici \/ Pneumatici/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Oleodinamica/i })).toBeInTheDocument();
+    });
+  });
 });

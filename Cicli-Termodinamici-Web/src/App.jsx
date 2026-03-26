@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Zap, Flame, Snowflake, RotateCw, Wind } from 'lucide-react';
+import { Zap, Flame, Snowflake, RotateCw, Wind, Droplets } from 'lucide-react';
 import Layout from './components/Layout';
 import Hero from './components/Hero';
 import CycleCard from './components/CycleCard';
@@ -12,6 +12,7 @@ const DieselPage = React.lazy(() => import('./components/DieselPage'));
 const RefrigerationPage = React.lazy(() => import('./components/RefrigerationPage'));
 const CarnotPage = React.lazy(() => import('./components/CarnotPage'));
 const SteamLabPage = React.lazy(() => import('./components/SteamLabPage'));
+const FluidPowerLabPage = React.lazy(() => import('./components/FluidPowerLabPage'));
 
 const cycles = [
   {
@@ -62,6 +63,13 @@ const cycles = [
     description: 'Porta nel web il flusso avanzato del tool desktop: costruzione manuale stati e percorso su diagrammi.',
     Icon: Flame,
     color: '#38BDF8',
+  },
+  {
+    title: 'Impianti Oleodinamici / Pneumatici',
+    id: 'impianti-fluidici',
+    description: 'Costruisci circuiti fluidici trascinando utilizzatori, valvole, pompe e compressori in un canvas interattivo.',
+    Icon: Droplets,
+    color: '#22D3EE',
   },
 ];
 
@@ -126,6 +134,10 @@ function App() {
         <Route
           path="laboratorio-vapore"
           element={<React.Suspense fallback={null}><SteamLabPage /></React.Suspense>}
+        />
+        <Route
+          path="impianti-fluidici"
+          element={<React.Suspense fallback={null}><FluidPowerLabPage /></React.Suspense>}
         />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
