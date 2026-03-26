@@ -1,4 +1,5 @@
 import { formatValue } from './formatNumber';
+import { addPdfHeader, applyPdfFooters, hexToRgb } from './pdfBranding';
 
 let jsPdfPromise = null;
 let html2CanvasPromise = null;
@@ -36,27 +37,35 @@ export const exportToPDF = async ({
   const pageW = 210;
   const margin = 15;
   const contentW = pageW - 2 * margin;
-  let y = margin;
+  let y = addPdfHeader(pdf, {
+    title: `Ciclo ${title}`,
+    subtitle: 'Report con parametri, risultati, diagrammi, coordinate e formule di calcolo.',
+    accentColor,
+    label: 'Cicli Termodinamici',
+  });
 
   const addNewPage = () => {
     pdf.addPage();
-    y = margin;
+    y = addPdfHeader(pdf, {
+      title: `Ciclo ${title}`,
+      subtitle: 'Report con parametri, risultati, diagrammi, coordinate e formule di calcolo.',
+      accentColor,
+      label: 'Cicli Termodinamici',
+    });
   };
 
   const checkSpace = (needed) => {
     if (y + needed > 280) addNewPage();
   };
 
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(22);
-  pdf.setTextColor(accentColor);
-  pdf.text(`Ciclo ${title}`, margin, y + 8);
+  pdf.setFillColor(248, 250, 252);
+  pdf.roundedRect(margin, y, contentW, 11, 3, 3, 'F');
+  pdf.setDrawColor(226, 232, 240);
+  pdf.roundedRect(margin, y, contentW, 11, 3, 3, 'S');
+  pdf.setFontSize(9);
+  pdf.setTextColor(71, 85, 105);
+  pdf.text(`Generato il ${new Date().toLocaleDateString('it-IT')} da ThermoHub e Prof. Ing. Andrea Viola`, margin + 4, y + 7);
   y += 16;
-
-  pdf.setFontSize(10);
-  pdf.setTextColor(100);
-  pdf.text(`Generato il ${new Date().toLocaleDateString('it-IT')} da ThermoHub e Prof. Ing. Andrea Viola`, margin, y);
-  y += 10;
 
   pdf.setDrawColor(200);
   pdf.line(margin, y, pageW - margin, y);
@@ -71,6 +80,8 @@ export const exportToPDF = async ({
   pdf.setFontSize(10);
   pdf.setTextColor(60);
 
+  pdf.setFillColor(248, 250, 252);
+  pdf.roundedRect(margin, y - 2, contentW, Math.max(12, Object.keys(inputs).length * 5 + 5), 3, 3, 'F');
   const inputLabels = {
     p_high: 'Pressione Caldaia (bar)',
     p_low: 'Pressione Bassa (bar)',
@@ -112,6 +123,8 @@ export const exportToPDF = async ({
   pdf.setFontSize(10);
   pdf.setTextColor(60);
 
+  pdf.setFillColor(248, 250, 252);
+  pdf.roundedRect(margin, y - 2, contentW, Math.max(12, Object.keys(stats).length * 5 + 5), 3, 3, 'F');
   const statLabels = {
     eta: 'Rendimento (%)',
     power: 'Potenza Netta (kW)',
@@ -294,6 +307,10 @@ export const exportToPDF = async ({
     });
   }
 
+  applyPdfFooters(pdf, {
+    accentColor,
+    footerLabel: `ThermoHub | Prof. Ing. Andrea Viola | Ciclo ${title}`,
+  });
   pdf.save(`Ciclo_${title.replace(/\s+/g, '_')}_ThermoHub.pdf`);
 };
 
@@ -319,13 +336,6 @@ function latexToPlain(latex) {
     .replace(/\^\{([^}]+)\}/g, '^$1')
     .replace(/[{}]/g, '')
     .replace(/\\/g, '');
-}
-
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
-    : [56, 189, 248];
 }
 
 function fmtPDF(value) {

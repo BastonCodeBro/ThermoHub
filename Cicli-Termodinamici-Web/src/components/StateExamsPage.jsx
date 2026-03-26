@@ -1,6 +1,7 @@
-import React, { useDeferredValue, useMemo, useState } from 'react';
-import { Download, ExternalLink, FileText, Search } from 'lucide-react';
-import { examTopicBadges, stateExams } from '../data/stateExamsData';
+import React, { useDeferredValue, useMemo, useRef, useState } from 'react';
+import { Download, ExternalLink, FileText, Search, Sparkles } from 'lucide-react';
+import ExamDiagram from './ExamDiagram';
+import { examDiagramMeta, examTopicBadges, stateExams } from '../data/stateExamsData';
 import { exportExamToPDF } from '../utils/examPdfExport';
 
 const StateExamsPage = () => {
@@ -8,6 +9,8 @@ const StateExamsPage = () => {
   const [selectedId, setSelectedId] = useState(stateExams[0]?.id ?? '');
   const [downloadingId, setDownloadingId] = useState(null);
   const deferredQuery = useDeferredValue(query);
+  const summaryRef = useRef(null);
+  const diagramRef = useRef(null);
 
   const filteredExams = useMemo(() => {
     const normalized = deferredQuery.trim().toLowerCase();
@@ -21,11 +24,17 @@ const StateExamsPage = () => {
   }, [deferredQuery]);
 
   const selectedExam = filteredExams.find((exam) => exam.id === selectedId) ?? filteredExams[0] ?? null;
+  const selectedDiagram = selectedExam ? examDiagramMeta[selectedExam.id] ?? null : null;
 
   const handleDownload = async (exam) => {
     setDownloadingId(exam.id);
     try {
-      await exportExamToPDF(exam);
+      await exportExamToPDF({
+        exam,
+        diagramMeta: examDiagramMeta[exam.id] ?? null,
+        summaryRef,
+        diagramRef,
+      });
     } finally {
       setDownloadingId(null);
     }
@@ -120,6 +129,51 @@ const StateExamsPage = () => {
                 </button>
               </div>
             </div>
+
+            <section className="exam-hero-panel" ref={summaryRef}>
+              <div className="exam-hero-copy">
+                <div className="exam-kicker-row">
+                  <span className="exam-kicker">Archivio ThermoHub</span>
+                  <span className="exam-kicker exam-kicker-year">{selectedExam.year}</span>
+                </div>
+                <h4>{selectedExam.headline}</h4>
+                <p>
+                  PDF svolto con traccia inclusa, passaggi ragionati, risultati finali ordinati e
+                  diagramma tecnico pronto per lo studio individuale.
+                </p>
+                <div className="exam-chip-row">
+                  <span className="exam-chip">Traccia inclusa</span>
+                  <span className="exam-chip">Svolgimento dettagliato</span>
+                  <span className="exam-chip">PDF firmato dal docente</span>
+                </div>
+              </div>
+              <div className="exam-hero-stats">
+                {selectedExam.firstPart.results.slice(0, 4).map((result) => (
+                  <div key={result.label} className="exam-hero-stat">
+                    <span>{result.label}</span>
+                    <strong>{result.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {selectedDiagram && (
+              <section className="exam-visual-panel" ref={diagramRef}>
+                <div className="exam-visual-copy">
+                  <div className="exam-block-title">
+                    <Sparkles size={18} />
+                    <h4>{selectedDiagram.title}</h4>
+                  </div>
+                  <p>{selectedDiagram.caption}</p>
+                  <ul className="exam-bullet-list">
+                    {selectedDiagram.highlights.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <ExamDiagram meta={selectedDiagram} />
+              </section>
+            )}
 
             <section className="exam-block">
               <div className="exam-block-title">

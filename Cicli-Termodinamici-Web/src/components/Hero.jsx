@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import heroBg from '../assets/hero-bg.png';
+import ThermoHubMark from './shared/ThermoHubMark';
 
 const heroPillars = [
   'Cicli termodinamici con simulatori interattivi',
@@ -29,6 +30,7 @@ const Hero = () => {
       <div className="hero-shell">
         <div className="hero-copy hero-animate-in">
           <div className="hero-brand-row">
+            <ThermoHubMark className="hero-brand-mark brand-mark" />
             <span className="hero-brand">ThermoHub</span>
             <div className="badge">
               <span className="badge-dot" />

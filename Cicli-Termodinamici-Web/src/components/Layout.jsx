@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { Wind } from 'lucide-react';
 import Navbar from './Navbar';
+import ThermoHubMark from './shared/ThermoHubMark';
 
 const Layout = () => {
   return (
@@ -12,7 +12,7 @@ const Layout = () => {
       </main>
       <footer className="footer">
         <div className="footer-logo">
-          <Wind size={18} className="footer-icon" style={{ color: '#38BDF8' }} />
+          <ThermoHubMark className="footer-icon brand-mark" />
           <span className="footer-logo-text">ThermoHub</span>
         </div>
         <p className="footer-copy">(c) 2026 Prof. Ing. Andrea Viola - Progetto ad uso didattico.</p>

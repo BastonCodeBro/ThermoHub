@@ -1,6 +1,6 @@
-# Uso Web / Web Usage
+# Uso Web ThermoHub
 
-Guida operativa per l'applicazione web React/Vite deployata su Vercel, verificata il **2026-03-25**.
+Guida operativa per l applicazione web React/Vite deployata su Vercel, aggiornata al **2026-03-26**.
 
 ## Requisiti
 
@@ -23,101 +23,54 @@ npm run test
 npm run build
 ```
 
-## Stato Dei Check
-
-- `npm run lint` -> passed
-- `npm run test` -> passed
-- `npm run build` -> passed
-
-## Routing
+## Routing principale
 
 - `/`
+- `/cicli-termodinamici`
+- `/impianti-fluidici`
+- `/esami-di-stato`
+- `/laboratorio-vapore`
 - `/rankine`
 - `/brayton`
 - `/otto`
 - `/diesel`
 - `/frigo`
 - `/carnot`
-- `/laboratorio-vapore`
 
-## Pagine E Logica
+## Sezioni
 
-### Rankine
+### Cicli termodinamici
 
-- acqua/vapore con `solveFluid()`
-- diagrammi `T-s`, `h-s`, `P-v`
-- cupola di saturazione
-- schema impianto
-- export PDF on-demand
+- libreria teorica di supporto
+- simulatori interattivi
+- export PDF con risultati e diagrammi
 
-### Brayton
+### Impianti oleodinamici e pneumatici
 
-- calcolo esplicito a gas ideale
-- confronto tra ciclo ideale e reale
-- diagrammi `T-s`, `P-v`, `h-s`
+- canvas per costruire schemi
+- palette componenti
+- simulazione e stato del circuito
 
-### Otto
+### Esami di stato
 
-- calcolo esplicito a gas ideale
-- trasformazioni coerenti con compressione/espansione politropica e scambi isocori
-
-### Diesel
-
-- calcolo esplicito a gas ideale
-- tratto di apporto calore isobarico
-
-### Frigorifero
-
-- refrigeranti: `R134a`, `R410A`, `R32`, `R22`, `R290`, `R600a`
-- diagrammi `T-s` e `P-h`
-
-### Carnot
-
-- ciclo gas ideale con tratti isotermi e isentropici
-
-### Laboratorio Vapore
-
-- costruzione manuale degli stati da `P + T`, `P + h`, `P + s`, `P + x`, `T + x`
-- visualizzazione del percorso sui diagrammi `T-s`, `h-s`, `P-v`
-- chiusura opzionale automatica del ciclo
-
-## Utility Principali
-
-### `src/utils/waterProps.js`
-
-- `ensureCoolProp()`
-- `solveFluid(inputs, fluid)`
-- `getSaturationDome(fluid)`
-- `getSaturationDomeFull(fluid)`
-
-### `src/utils/processPath.js`
-
-- `generateProcessPath(pt1, pt2, fluid, numPoints, options)`
-- instrada i fluidi reali verso CoolProp
-- instrada i cicli a gas verso il generatore ideale dedicato
-
-### `src/utils/idealGas.js`
-
-- `calcOttoCycle()`
-- `calcDieselCycle()`
-- `calcBraytonCycle()`
-- `calcCarnotCycle()`
-- `generateIdealGasPath()`
+- archivio per anno e codice
+- traccia sintetica e svolgimento dettagliato
+- diagramma tecnico dedicato per ogni prova
+- download PDF completo con traccia inclusa
 
 ## Deploy
 
-- deploy target: Vercel
+- target: Vercel
 - configurazione root: `vercel.json`
-- build output: `Cicli-Termodinamici-Web/dist`
-- nessun uso di Streamlit o backend Python nel deploy del sito
+- output: `Cicli-Termodinamici-Web/dist`
 
-## Limitazioni Note
+## Note operative
 
-- la copertura test e migliorata ma resta selettiva
-- parte della conoscenza di dominio esiste ancora anche nel legacy Python in `legacy/python-desktop/`
-- la convergenza completa fra web app e codice legacy non e ancora finita
+- il sito e completamente statico lato hosting
+- le tracce originali sono servite dalla cartella `public/esami/originali/`
+- i PDF vengono generati nel browser dell utente
 
-Related:
+## Documenti correlati
 
 - [ARCHITETTURA.md](ARCHITETTURA.md)
 - [MANUTENZIONE_E_MIGLIORAMENTI.md](MANUTENZIONE_E_MIGLIORAMENTI.md)

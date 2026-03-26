@@ -644,3 +644,86 @@ export const examTopicBadges = [
   'Oleodinamica e timoneria',
   'Antincendio e impianti ausiliari',
 ];
+
+export const examDiagramMeta = {
+  'a056-ord25': {
+    type: 'diesel-steam',
+    title: 'Schema diesel lento con recupero vapore',
+    caption: 'Dal motore principale ai servizi ausiliari: propulsione, gas di scarico, caldaia a recupero e circuito acqua-vapore.',
+    highlights: [
+      'Potenza meccanica all asse e calore residuo sullo scarico vengono letti nello stesso schema.',
+      'Il circuito mostra il ritorno condense e la pompa alimento, utili nella parte impiantistica della traccia.',
+      'Nel PDF viene esportato come diagramma tecnico insieme alla sintesi dei risultati.',
+    ],
+  },
+  'a056-ord24': {
+    type: 'cogag',
+    title: 'Propulsione COGAG con innesto su riduttore',
+    caption: 'Le turbine di crociera e di boost convergono sul riduttore principale prima della linea d asse.',
+    highlights: [
+      'La lettura dello schema aiuta a motivare velocita economica, media forza e massima forza.',
+      'Le frizioni e il riduttore spiegano come combinare le macchine senza perdere la continuita della propulsione.',
+      'Il diagramma mette in evidenza il trasferimento della potenza fino all elica.',
+    ],
+  },
+  'a056-ord23': {
+    type: 'cargo-pump',
+    title: 'Schema idraulico delle pompe di carico in parallelo',
+    caption: 'Cisterna, due pompe centrifughe e manifold finale per dimensionare portata, prevalenza e velocita del greggio.',
+    highlights: [
+      'Il parallelo delle pompe chiarisce perche la portata totale si divide in due rami uguali.',
+      'Lo stesso schema e utile per collegare la traccia alla sezione impianti oleodinamici del sito.',
+      'Nel PDF la figura accompagna il calcolo della potenza assorbita da ciascuna pompa.',
+    ],
+  },
+  'a009-ord19': {
+    type: 'traditional-propulsion',
+    title: 'Apparato propulsivo tradizionale per nave passeggeri',
+    caption: 'Motore, giunto, riduttore e linea d asse sono messi in sequenza per visualizzare il trasferimento di potenza.',
+    highlights: [
+      'La catena cinematica rende piu leggibile il dimensionamento dei motori principali.',
+      'Il percorso del calore recuperato puo essere discusso insieme ai servizi nave e all ACS.',
+      'Il diagramma viene riportato nel PDF in una tavola separata e leggibile anche in stampa.',
+    ],
+  },
+  'i159-ord18': {
+    type: 'lng-electric',
+    title: 'Propulsione elettrica LNG con turbine a gas',
+    caption: 'La generazione elettrica alimenta il quadro principale e gli azipod: schema chiaro per collegare Brayton e rete di bordo.',
+    highlights: [
+      'Il layout mostra il passaggio dalla turbina a gas all alternatore e poi alla propulsione elettrica.',
+      'E utile per commentare rendimento globale, consumo e recupero termico dei gas di scarico.',
+      'La grafica riprende il lessico visivo ThermoHub e viene esportata nel PDF svolto.',
+    ],
+  },
+  'i159-ord17': {
+    type: 'diesel-steam',
+    title: 'Recupero di vapore ausiliario su nave da crociera',
+    caption: 'Schema sintetico del recupero dai gas di scarico verso drum, utenze e ritorno condense.',
+    highlights: [
+      'La figura rende immediato il concetto di utilizzazione complessiva del combustibile.',
+      'Lo studente vede nello stesso colpo d occhio motore, caldaia a recupero e circuito vapore.',
+      'L esportazione PDF usa questo diagramma come tavola tecnica iniziale.',
+    ],
+  },
+  'm582-ord16': {
+    type: 'diesel-steam',
+    title: 'Caldaia a recupero e circuito HFO ausiliario',
+    caption: 'Il focus resta sul recupero vapore, ma con taglio coerente alla gestione del combustibile di bordo.',
+    highlights: [
+      'Il diagramma sostiene la parte di impianto richiesta nella prima parte della prova.',
+      'La relazione tra potenza combustibile, recupero e utenze ausiliarie risulta piu facile da spiegare.',
+      'Nel PDF i dati numerici vengono affiancati a questo schema per una lettura piu ordinata.',
+    ],
+  },
+  'm582-ord15': {
+    type: 'slow-diesel',
+    title: 'Diesel lento sovralimentato con linea d asse',
+    caption: 'Schema utile per collegare geometria del cilindro, turbo e propulsione diretta della portacontainer.',
+    highlights: [
+      'La sovralimentazione e messa in evidenza accanto alla linea d asse per richiamare rendimento e consumi.',
+      'La figura aiuta a raccontare la struttura del motore senza ridurre tutto alla sola formula.',
+      'Nel PDF compare come supporto grafico alla soluzione numerica.',
+    ],
+  },
+};

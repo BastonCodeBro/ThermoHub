@@ -1,17 +1,17 @@
-# Architettura / Architecture
+# Architettura ThermoHub
 
-Documento aggiornato allo stato verificato il **2026-03-25**.
+Documento aggiornato al **2026-03-26**.
 
-## Overview
+## Panoramica
 
 Il repository e organizzato in due blocchi principali:
 
-1. **Web App React/Vite**
+1. **ThermoHub Web**
 2. **Legacy Python Desktop**
 
-La parte web e il prodotto attivo. La parte Python e stata isolata in `legacy/python-desktop/` come riferimento storico e tecnico.
+La parte web e il prodotto attivo. La parte Python resta isolata in `legacy/python-desktop/` come riferimento storico.
 
-## 1. Web App React/Vite
+## 1. ThermoHub Web
 
 ### Percorso
 
@@ -19,32 +19,29 @@ La parte web e il prodotto attivo. La parte Python e stata isolata in `legacy/py
 
 ### Responsabilita
 
-- routing e composizione pagine
+- routing e composizione delle pagine React
 - calcolo proprieta browser-side con `coolprop-wasm`
-- logica esplicita dei cicli a gas in `src/utils/idealGas.js`
+- simulazione esplicita dei cicli a gas in `src/utils/idealGas.js`
 - generazione dei percorsi in `src/utils/processPath.js`
 - rendering diagrammi con Plotly
-- export PDF on-demand
+- export PDF brandizzato per cicli ed esami
+- archivio esami di stato con tracce originali e schemi tecnici
 
-### Interfacce JS principali
+### Moduli chiave
 
-- `solveFluid`
-- `getSaturationDome`
-- `getSaturationDomeFull`
-- `generateProcessPath`
-- `calcOttoCycle`
-- `calcDieselCycle`
-- `calcBraytonCycle`
-- `calcCarnotCycle`
-- `generateIdealGasPath`
-- `exportToPDF`
+- `src/App.jsx`
+- `src/components/StateExamsPage.jsx`
+- `src/components/FluidPowerLabPage.jsx`
+- `src/components/ThermodynamicCyclesPage.jsx`
+- `src/utils/pdfExport.js`
+- `src/utils/examPdfExport.js`
 
-### Note Architetturali
+### Note architetturali
 
 - Rankine e refrigerazione usano CoolProp browser-side
-- Brayton, Otto, Diesel e Carnot usano logica gas-ideale esplicita nel frontend
-- `Laboratorio Vapore` importa nel sito il flusso manuale piu utile del vecchio desktop
-- Plotly, `jspdf` e `html2canvas` sono caricati in modo lazy
+- Brayton, Otto, Diesel e Carnot usano logica gas ideale dedicata
+- il laboratorio vapore porta nel web il flusso piu utile del vecchio desktop
+- i PDF sono generati on-demand con `jspdf` e `html2canvas`
 
 ## 2. Legacy Python Desktop
 
@@ -52,62 +49,28 @@ La parte web e il prodotto attivo. La parte Python e stata isolata in `legacy/py
 
 - `legacy/python-desktop/`
 
-### Contenuto
-
-- `cicli_termodinamici.py`
-- `calcolatore_acqua.py`
-- `calcolatore_brayton.py`
-- `calcolatore_otto.py`
-- `calcolatore_diesel.py`
-- `calcolatore_frigo.py`
-- `core/`
-- launcher `.bat`
-- `requirements-desktop.txt`
-
-### Ruolo Attuale
+### Ruolo attuale
 
 - riferimento storico
 - confronto formule e workflow
-- base da cui e stato portato nel web il laboratorio vapore
+- archivio del vecchio strumento desktop
 
-Il legacy non fa parte del deploy Vercel del sito.
+Il legacy non fa parte del deploy Vercel.
 
-## Runtime Data Flow
+## Flusso dati web
 
-### Web
+1. l utente inserisce i parametri nelle pagine React
+2. il frontend calcola stati, risultati e percorsi
+3. Plotly renderizza diagrammi e schemi
+4. l export PDF cattura le sezioni utili e genera il documento finale
 
-1. l'utente modifica i parametri in una pagina React
-2. la pagina calcola stati e statistiche
-3. `generateProcessPath()` o `generateIdealGasPath()` costruiscono i tratti
-4. Plotly renderizza i diagrammi
-5. l'export PDF carica on-demand `jspdf` e `html2canvas`
+## Rischi principali
 
-### Legacy Desktop
+- duplicazione parziale di conoscenza tra web e legacy
+- copertura test ancora selettiva sulle parti piu grafiche
+- bundle ancora pesante per via di Plotly e CoolProp
 
-1. l'utente usa una GUI `customtkinter`
-2. il calcolo avviene localmente in Python
-3. `legacy/python-desktop/core/` costruisce proprieta e percorsi
-4. `matplotlib` renderizza i diagrammi
-
-## Rischi Architetturali
-
-### Duplicazione di dominio
-
-- una parte della conoscenza termodinamica vive ancora anche nel legacy Python
-- la parte web e oggi la sorgente attiva del prodotto
-- serve evitare divergenze future tra formule legacy e formule web
-
-### Copertura test ancora selettiva
-
-- i test web coprono routing e una base numerica per i cicli a gas
-- mancano ancora test numerici estesi su Rankine, refrigerazione e validazione grafici
-
-### Bundle ancora costoso
-
-- il caricamento e migliorato con lazy loading
-- Plotly e CoolProp restano comunque i componenti piu costosi del frontend
-
-Related:
+## Documenti correlati
 
 - [USO_WEB.md](USO_WEB.md)
 - [USO_DESKTOP.md](USO_DESKTOP.md)

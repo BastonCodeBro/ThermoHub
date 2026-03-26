@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Wind, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import ThermoHubMark from './shared/ThermoHubMark';
 
 const cycleLinks = [
   { to: '/cicli-termodinamici', label: 'Cicli' },
@@ -27,7 +28,7 @@ const Navbar = () => {
     <>
       <nav className="navbar glass">
         <Link to="/" className="nav-logo no-underline">
-          <Wind className="nav-icon" />
+          <ThermoHubMark className="nav-icon brand-mark" />
           <span className="logo-text">Thermo<span className="accent">Hub</span></span>
         </Link>
 

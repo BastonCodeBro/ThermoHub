@@ -1,21 +1,19 @@
-# Cicli Termodinamici Web
+# ThermoHub Web
 
-Applicazione web React/Vite per lo studio interattivo dei cicli termodinamici.
+Applicazione web React/Vite di **ThermoHub** per spiegare cicli termodinamici, simulare impianti fluidici e distribuire esami di stato svolti.
 
-React/Vite web application for interactive thermodynamic-cycle analysis.
-
-Stato verificato il **2026-03-25**.
+Stato aggiornato al **2026-03-26**.
 
 ## Obiettivo
 
-- questa cartella contiene il prodotto deployato su Vercel
-- non usa Streamlit
-- non richiede runtime Python lato deploy
-- incorpora anche un flusso avanzato ispirato al vecchio strumento desktop tramite `Laboratorio Vapore`
+- offrire un ambiente unico per lezione, esercitazione e ripasso
+- mantenere tutto client-side nel deploy Vercel
+- includere PDF scaricabili brandizzati ThermoHub
 
-## Route Disponibili
+## Route disponibili
 
 - `/`
+- `/cicli-termodinamici`
 - `/rankine`
 - `/brayton`
 - `/otto`
@@ -23,15 +21,17 @@ Stato verificato il **2026-03-25**.
 - `/frigo`
 - `/carnot`
 - `/laboratorio-vapore`
+- `/impianti-fluidici`
+- `/esami-di-stato`
 
-## Funzionalita Principali
+## Funzionalita principali
 
 - diagrammi interattivi Plotly
-- export PDF per le pagine ciclo
-- proprieta reali via `coolprop-wasm` per acqua e refrigeranti
-- percorsi gas-ideali coerenti per Brayton, Otto, Diesel e Carnot
-- confronto ideale/reale nella pagina Brayton
-- laboratorio vapore con costruzione manuale dei punti da coppie di proprieta
+- export PDF con branding ThermoHub
+- proprieta reali via `coolprop-wasm`
+- simulazione di cicli ideali e reali
+- laboratorio vapore avanzato
+- archivio esami con traccia, schema e soluzione completa
 
 ## Stack
 
@@ -45,7 +45,7 @@ Stato verificato il **2026-03-25**.
 - Vitest
 - ESLint
 
-## Avvio Locale
+## Avvio locale
 
 ```powershell
 npm install
@@ -60,45 +60,13 @@ npm run dev
 - `npm run test`
 - `npm run lint`
 
-## API JS Utilizzate
-
-Utility da considerare parte dell'interfaccia attuale del frontend:
-
-- `solveFluid`
-- `getSaturationDome`
-- `getSaturationDomeFull`
-- `generateProcessPath`
-- `exportToPDF`
-
-Per i cicli a gas:
-
-- `calcOttoCycle`
-- `calcDieselCycle`
-- `calcBraytonCycle`
-- `calcCarnotCycle`
-- `generateIdealGasPath`
-
-## Asset E Runtime
+## Asset e runtime
 
 - il file WASM richiesto e `public/coolprop.wasm`
-- l'inizializzazione di CoolProp e lazy
-- il deploy Vercel del repository usa la build prodotta da questa cartella
+- le tracce originali degli esami sono in `public/esami/originali/`
+- il deploy del repository usa la build prodotta da questa cartella
 
-## Stato Dei Check
-
-Verificato il **2026-03-25**:
-
-- `npm run lint` -> passed
-- `npm run test` -> passed
-- `npm run build` -> passed
-
-## Limitazioni Note
-
-- la copertura test e ancora leggera e concentrata sul routing
-- parte del dominio termodinamico e ancora separata fra codice web attivo e codice Python legacy
-- restano file storici desktop nel repository root, ma non servono al deploy del sito
-
-## Documenti Correlati
+## Documenti correlati
 
 - [../docs/USO_WEB.md](../docs/USO_WEB.md)
 - [../docs/ARCHITETTURA.md](../docs/ARCHITETTURA.md)
