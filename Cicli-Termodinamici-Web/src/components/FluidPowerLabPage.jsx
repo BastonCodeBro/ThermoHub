@@ -78,6 +78,9 @@ const KIND_LABELS = {
   sink: 'Ritorno / scarico',
   conditioning: 'Condizionamento',
   auxiliary: 'Ausiliario',
+  flowControl: 'Regolazione flusso',
+  instrument: 'Strumento',
+  display: 'Simbolo',
 };
 
 const createExpandedGroupState = () =>
@@ -110,6 +113,8 @@ const createWorkspace = () => ({
     activeNodes: [],
     warnings: [],
     actuatorAction: null,
+    readings: {},
+    actuatorTiming: null,
     summary: null,
   },
   message: 'Trascina i componenti nel canvas e collega le porte per costruire il circuito.',
@@ -423,6 +428,14 @@ const getComponentTeachingNote = (component) => {
     return `${component.simBehavior.family} ${component.simBehavior.workPorts?.length === 1 ? 'per singolo effetto' : 'per doppio effetto'}`;
   }
 
+  if (component?.simBehavior?.kind === 'flowControl') {
+    return 'Limitazione di portata';
+  }
+
+  if (component?.simBehavior?.kind === 'instrument') {
+    return 'Strumento di misura';
+  }
+
   return null;
 };
 
@@ -449,6 +462,14 @@ const getMotionBadgeLabel = (component, motionState, isRunning) => {
     return 'Flusso instradato';
   }
 
+  if (component?.simBehavior?.kind === 'flowControl') {
+    return 'Flusso regolato';
+  }
+
+  if (component?.simBehavior?.kind === 'instrument') {
+    return 'Misura attiva';
+  }
+
   return 'Flusso attivo';
 };
 
@@ -458,6 +479,8 @@ const getNodeCounts = (workspace) => {
     valve: 0,
     actuator: 0,
     sink: 0,
+    flowControl: 0,
+    instrument: 0,
   };
 
   workspace.nodes.forEach((node) => {
@@ -1428,6 +1451,12 @@ const FluidPowerLabPage = () => {
                     motionState,
                     workspace.snapshot.isRunning && isActive,
                   );
+                  const reading = workspace.snapshot.readings?.[node.instanceId] ?? null;
+                  const isInstrument = component.symbol === 'instrument';
+                  const isFlowControl = component.simBehavior.kind === 'flowControl';
+                  const flowPct = isFlowControl
+                    ? Math.round((node.state?.flowMultiplier ?? component.simBehavior.flowMultiplier ?? 1.0) * 100)
+                    : null;
 
                   return (
                     <div
@@ -1452,10 +1481,36 @@ const FluidPowerLabPage = () => {
                         {component.simBehavior.kind === 'valve' && (
                           <button
                             className="fluid-node-toggle"
-                            onClick={() => toggleValve(node.instanceId)}
+                            onClick={(e) => { e.stopPropagation(); toggleValve(node.instanceId); }}
                             aria-label={`Commuta ${node.label}`}
                           >
                             {describeActuatorState(node, component)}
+                          </button>
+                        )}
+                        {isFlowControl && (
+                          <button
+                            className="fluid-node-toggle fluid-node-toggle-throttle"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateWorkspace((current) => ({
+                                ...current,
+                                nodes: current.nodes.map((n) => {
+                                  if (n.instanceId !== node.instanceId) {
+                                    return n;
+                                  }
+                                  const currentPct = Math.round((n.state?.flowMultiplier ?? 1.0) * 100);
+                                  const nextPct = currentPct >= 100 ? 25 : currentPct >= 50 ? 100 : currentPct >= 25 ? 50 : 25;
+                                  return {
+                                    ...n,
+                                    state: { ...n.state, flowMultiplier: nextPct / 100 },
+                                  };
+                                }),
+                                snapshot: createWorkspace().snapshot,
+                              }));
+                            }}
+                            aria-label={`Apertura ${flowPct}%`}
+                          >
+                            {flowPct}%
                           </button>
                         )}
                       </div>
@@ -1465,10 +1520,17 @@ const FluidPowerLabPage = () => {
                         label={node.label}
                         motionState={motionState}
                         nodeState={node.state ?? null}
+                        reading={reading}
                       />
-                      {(motionBadge || teachingNote) && (
+                      {(motionBadge || teachingNote || (isInstrument && reading?.active)) && (
                         <div className="fluid-node-footer">
                           {motionBadge && <span className="fluid-node-motion-badge">{motionBadge}</span>}
+                          {isInstrument && reading?.active && (
+                            <span className="fluid-node-reading-badge">
+                              {reading.pressure != null ? `${reading.pressure} bar` : ''}
+                              {reading.flowRate != null ? `${reading.flowRate} L/min` : ''}
+                            </span>
+                          )}
                           {teachingNote && <span className="fluid-node-teaching-note">{teachingNote}</span>}
                         </div>
                       )}
@@ -1549,6 +1611,19 @@ const FluidPowerLabPage = () => {
                     <span className="stat-card-label">Dominio</span>
                     <strong className="stat-card-value">{domainMeta.label}</strong>
                   </div>
+                  {workspace.snapshot.actuatorTiming && (
+                    <div className="fluid-simulation-card">
+                      <span className="stat-card-label">Tempo corsa</span>
+                      <strong className="stat-card-value">
+                        {workspace.snapshot.actuatorTiming.actualStrokeTime}s
+                      </strong>
+                      {workspace.snapshot.actuatorTiming.flowMultiplier < 1 && (
+                        <span className="stat-card-detail">
+                          (x{workspace.snapshot.actuatorTiming.flowMultiplier} portata)
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="fluid-checklist-panel">
@@ -1609,6 +1684,19 @@ const FluidPowerLabPage = () => {
                       {workspace.snapshot.actuatorAction ?? 'Nessuna'}
                     </strong>
                   </div>
+                  {workspace.snapshot.actuatorTiming && (
+                    <div className="fluid-simulation-card">
+                      <span className="stat-card-label">Tempo corsa</span>
+                      <strong className="stat-card-value">
+                        {workspace.snapshot.actuatorTiming.actualStrokeTime}s
+                      </strong>
+                      {workspace.snapshot.actuatorTiming.flowMultiplier < 1 && (
+                        <span className="stat-card-detail">
+                          (x{workspace.snapshot.actuatorTiming.flowMultiplier} portata)
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {workspace.snapshot.warnings.length > 0 && (

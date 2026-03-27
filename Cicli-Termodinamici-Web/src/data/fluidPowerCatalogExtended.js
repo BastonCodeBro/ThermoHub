@@ -94,6 +94,7 @@ const makeInlineAux = ({
     { id: 'OUT', label: 'OUT', side: 'right', align: 0.5, kind: 'fluid' },
   ],
   passThroughRoutes = [['IN', 'OUT']],
+  simBehaviorOverride = null,
 }) => ({
   id,
   domain,
@@ -104,7 +105,7 @@ const makeInlineAux = ({
   symbolVariant,
   defaultSize,
   ports,
-  simBehavior: {
+  simBehavior: simBehaviorOverride ?? {
     kind: 'auxiliary',
     passThroughRoutes,
   },
@@ -659,6 +660,11 @@ const domainAuxiliaries = DOMAINS.flatMap((domain) => [
     symbol: 'control-valve',
     symbolVariant: { style: 'throttle-check' },
     defaultSize: { width: 148, height: 92 },
+    simBehaviorOverride: {
+      kind: 'flowControl',
+      flowMultiplier: 0.5,
+      adjustable: true,
+    },
   }),
   makeInlineAux({
     id: `${domain.id}-shuttle-valve`,
@@ -731,6 +737,12 @@ const domainAuxiliaries = DOMAINS.flatMap((domain) => [
     description: 'Valvola di strozzamento a comando manuale.',
     symbol: 'control-valve',
     symbolVariant: { style: 'throttle' },
+    simBehaviorOverride: {
+      kind: 'flowControl',
+      passThroughRoutes: [['IN', 'OUT']],
+      flowMultiplier: 0.5,
+      adjustable: true,
+    },
   }),
   makeInlineAux({
     id: `${domain.id}-flow-divider`,
@@ -919,33 +931,44 @@ const domainCommandsAndMeasures = DOMAINS.flatMap((domain) => [
     symbolVariant: { style: 'combined-command' },
     defaultSize: { width: 156, height: 84 },
   }),
-  makeDisplay({
+  {
     id: `${domain.id}-manometer`,
     domain: domain.id,
     category: 'strumentazione-e-comandi',
     label: 'Manometro',
-    description: 'Strumento di misura della pressione.',
+    description: 'Strumento di misura della pressione, inserito in linea.',
     symbol: 'instrument',
     symbolVariant: { style: 'manometer' },
-  }),
-  makeDisplay({
-    id: `${domain.id}-thermometer`,
-    domain: domain.id,
-    category: 'strumentazione-e-comandi',
-    label: 'Termometro',
-    description: 'Strumento di misura della temperatura.',
-    symbol: 'instrument',
-    symbolVariant: { style: 'thermometer' },
-  }),
-  makeDisplay({
+    defaultSize: { width: 124, height: 84 },
+    ports: [
+      { id: 'IN', label: 'IN', side: 'left', align: 0.5, kind: 'fluid' },
+      { id: 'OUT', label: 'OUT', side: 'right', align: 0.5, kind: 'fluid' },
+    ],
+    simBehavior: {
+      kind: 'instrument',
+      instrumentType: 'pressure',
+      passThroughRoutes: [['IN', 'OUT']],
+    },
+  },
+  {
     id: `${domain.id}-flowmeter`,
     domain: domain.id,
     category: 'strumentazione-e-comandi',
     label: 'Flussometro',
-    description: 'Misuratore di portata.',
+    description: 'Misuratore di portata, inserito in linea.',
     symbol: 'instrument',
     symbolVariant: { style: 'flowmeter' },
-  }),
+    defaultSize: { width: 124, height: 84 },
+    ports: [
+      { id: 'IN', label: 'IN', side: 'left', align: 0.5, kind: 'fluid' },
+      { id: 'OUT', label: 'OUT', side: 'right', align: 0.5, kind: 'fluid' },
+    ],
+    simBehavior: {
+      kind: 'instrument',
+      instrumentType: 'flow',
+      passThroughRoutes: [['IN', 'OUT']],
+    },
+  },
   makeDisplay({
     id: `${domain.id}-counter`,
     domain: domain.id,

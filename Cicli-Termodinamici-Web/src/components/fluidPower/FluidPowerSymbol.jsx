@@ -686,6 +686,46 @@ const renderSymbol = (component, color, nodeState) => {
   }
 };
 
+const renderReadingOverlay = (component, reading, color) => {
+  const style = component.symbolVariant?.style;
+
+  if (style === 'manometer' && reading.pressure != null) {
+    const maxPressure = 160;
+    const normalized = Math.min(1, reading.pressure / maxPressure);
+    const startAngle = -225;
+    const endAngle = 45;
+    const angle = startAngle + normalized * (endAngle - startAngle);
+    const rad = (angle * Math.PI) / 180;
+    const needleLen = 18;
+    const nx = 80 + needleLen * Math.cos(rad);
+    const ny = 42 + needleLen * Math.sin(rad);
+
+    return (
+      <g opacity="0.95">
+        <line x1="80" y1="42" x2={nx} y2={ny} stroke="#F87171" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="80" cy="42" r="3" fill="#F87171" />
+        <text x="80" y="62" textAnchor="middle" fill={color} fontSize="10" fontWeight="800">
+          {reading.pressure}
+        </text>
+        <text x="80" y="72" textAnchor="middle" fill="#94A3B8" fontSize="7" fontWeight="600">bar</text>
+      </g>
+    );
+  }
+
+  if (style === 'flowmeter' && reading.flowRate != null) {
+    return (
+      <g opacity="0.95">
+        <text x="80" y="52" textAnchor="middle" fill={color} fontSize="11" fontWeight="800">
+          {reading.flowRate}
+        </text>
+        <text x="80" y="64" textAnchor="middle" fill="#94A3B8" fontSize="7" fontWeight="600">L/min</text>
+      </g>
+    );
+  }
+
+  return null;
+};
+
 const renderMotionOverlay = (component, motionState, color) => {
   if (!motionState) {
     return null;
@@ -811,7 +851,7 @@ const renderMotionOverlay = (component, motionState, color) => {
   );
 };
 
-const FluidPowerSymbol = ({ component, active = false, label, className = '', motionState = null, nodeState = null }) => {
+const FluidPowerSymbol = ({ component, active = false, label, className = '', motionState = null, nodeState = null, reading = null }) => {
   const color = domainColor(component, active);
   const svgClassName = ['fluid-symbol', className].filter(Boolean).join(' ');
 
@@ -819,6 +859,7 @@ const FluidPowerSymbol = ({ component, active = false, label, className = '', mo
     <svg viewBox="0 0 160 100" className={svgClassName} role="img" aria-label={label ?? component.label}>
       {renderSymbol(component, color, nodeState)}
       {renderMotionOverlay(component, motionState, color)}
+      {reading?.active && component.symbol === 'instrument' && renderReadingOverlay(component, reading, color)}
     </svg>
   );
 };

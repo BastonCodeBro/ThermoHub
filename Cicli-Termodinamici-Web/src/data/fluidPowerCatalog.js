@@ -215,8 +215,10 @@ export const componentCatalog = [
       { id: 'OUT', label: 'OUT', side: 'right', align: 0.5, kind: 'fluid' },
     ],
     simBehavior: {
-      kind: 'auxiliary',
+      kind: 'flowControl',
       passThroughRoutes: [['IN', 'OUT']],
+      flowMultiplier: 1.0,
+      adjustable: true,
     },
   },
   {
@@ -434,7 +436,7 @@ export const componentCatalog = [
     domain: 'pneumatic',
     category: 'ausiliari',
     label: 'Regolatore di flusso',
-    description: 'Nodo passante per la regolazione della velocità del cilindro.',
+    description: 'Nodo passante per la regolazione della velocita del cilindro.',
     symbol: 'flow-control',
     defaultSize: { width: 132, height: 84 },
     ports: [
@@ -442,8 +444,10 @@ export const componentCatalog = [
       { id: 'OUT', label: 'OUT', side: 'right', align: 0.5, kind: 'fluid' },
     ],
     simBehavior: {
-      kind: 'auxiliary',
+      kind: 'flowControl',
       passThroughRoutes: [['IN', 'OUT']],
+      flowMultiplier: 1.0,
+      adjustable: true,
     },
   },
   {

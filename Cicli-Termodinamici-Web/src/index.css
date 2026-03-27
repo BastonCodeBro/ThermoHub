@@ -1182,6 +1182,12 @@ p { margin: 0; }
   letter-spacing: -0.01em;
 }
 
+.stat-card-detail {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 /* ================================================================
    Plot Container
    ================================================================ */
@@ -1455,6 +1461,12 @@ p { margin: 0; }
   font-weight: 600;
   color: var(--text-dim);
   min-width: 120px;
+}
+
+.formula-description {
+  font-size: 0.85rem;
+  color: #CBD5E1;
+  font-style: italic;
 }
 
 .katex-inline {
@@ -2208,6 +2220,19 @@ p { margin: 0; }
   background: rgba(148, 163, 184, 0.12);
   border: 1px solid rgba(148, 163, 184, 0.2);
   color: #CBD5E1;
+}
+
+.fluid-node-reading-badge {
+  background: rgba(52, 211, 153, 0.18);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #6EE7B7;
+  font-variant-numeric: tabular-nums;
+}
+
+.fluid-node-toggle-throttle {
+  background: rgba(168, 85, 247, 0.15) !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+  color: #C4B5FD !important;
 }
 
 .fluid-node-toggle {

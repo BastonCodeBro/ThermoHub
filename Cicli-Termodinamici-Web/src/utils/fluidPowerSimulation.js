@@ -74,7 +74,9 @@ const getPassiveRoutes = (node, component) => {
 
   if (
     component.simBehavior.kind === 'conditioning' ||
-    component.simBehavior.kind === 'auxiliary'
+    component.simBehavior.kind === 'auxiliary' ||
+    component.simBehavior.kind === 'flowControl' ||
+    component.simBehavior.kind === 'instrument'
   ) {
     return component.simBehavior.passThroughRoutes ?? [];
   }
@@ -381,6 +383,8 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
       activeConnections: [],
       activeNodes: [],
       actuatorAction: null,
+      readings: {},
+      actuatorTiming: null,
       summary: null,
     };
   }
@@ -413,15 +417,16 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
 
       if (exhaustPath) {
         const action = 'ritorno a molla';
-        const activePortKeys = uniqueArray(
+        const allActivePorts = uniqueArray(
           exhaustPath.ports.map((port) => toPortKey(port.nodeId, port.portId)),
         );
+        const nodeLookupForReadings = new Map(nodes.map((n) => [n.instanceId, n]));
 
         return {
           valid: true,
           isRunning: true,
           warnings: [`Schema avviato: ${action} dell'utilizzatore (scarico attraverso il distributore).`],
-          activePorts: activePortKeys,
+          activePorts: allActivePorts,
           activeConnections: uniqueArray(exhaustPath.connectionIds),
           activeNodes: uniqueArray([
             ...exhaustPath.nodeIds,
@@ -431,6 +436,8 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
             sinkNode.instanceId,
           ]),
           actuatorAction: action,
+          readings: computeReadings(allActivePorts, uniqueArray(exhaustPath.connectionIds), nodes, nodeLookupForReadings),
+          actuatorTiming: computeActuatorTiming(actuatorNode, actuatorComponent, allActivePorts, nodeLookupForReadings),
           summary: {
             sourceLabel: sourceComponent.label,
             valveLabel: valveComponent.label,
@@ -447,6 +454,8 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
         activeConnections: [],
         activeNodes: [],
         actuatorAction: null,
+        readings: {},
+        actuatorTiming: null,
         summary: null,
       };
     }
@@ -459,6 +468,8 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
       activeConnections: [],
       activeNodes: [],
       actuatorAction: null,
+      readings: {},
+      actuatorTiming: null,
       summary: null,
     };
   }
@@ -477,6 +488,8 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
       activeConnections: [],
       activeNodes: [],
       actuatorAction: null,
+      readings: {},
+      actuatorTiming: null,
       summary: null,
     };
   }
@@ -526,14 +539,35 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
           ? 'estensione'
           : 'ritrazione';
 
+  const allActivePorts = uniqueArray(activePortKeys);
+  const allActiveConnections = uniqueArray(activeConnectionIds);
+  const allActiveNodes = uniqueArray(activeNodeIds);
+  const nodeLookupForReadings = new Map(nodes.map((n) => [n.instanceId, n]));
+
+  const readings = computeReadings(
+    allActivePorts,
+    allActiveConnections,
+    nodes,
+    nodeLookupForReadings,
+  );
+
+  const actuatorTiming = computeActuatorTiming(
+    actuatorNode,
+    actuatorComponent,
+    allActivePorts,
+    nodeLookupForReadings,
+  );
+
   return {
     valid: true,
     isRunning: true,
     warnings: [`Schema avviato: ${action} dell'utilizzatore.`],
-    activePorts: uniqueArray(activePortKeys),
-    activeConnections: uniqueArray(activeConnectionIds),
-    activeNodes: uniqueArray(activeNodeIds),
+    activePorts: allActivePorts,
+    activeConnections: allActiveConnections,
+    activeNodes: allActiveNodes,
     actuatorAction: action,
+    readings,
+    actuatorTiming,
     summary: {
       sourceLabel: sourceComponent.label,
       valveLabel: valveComponent.label,
@@ -569,3 +603,154 @@ export const applyValveState = (nodes, nodeId, nextState) =>
       },
     };
   });
+
+const BASE_SYSTEM_PRESSURE = 100;
+const BASE_FLOW_RATE = 12;
+
+const collectRestrictionsOnPath = (pathPorts, nodeLookup) => {
+  const restrictions = [];
+
+  for (const portRef of pathPorts) {
+    const node = nodeLookup.get(portRef.nodeId);
+    if (!node) {
+      continue;
+    }
+
+    const component = getComponentDefinition(node.componentId);
+    if (!component) {
+      continue;
+    }
+
+    if (component.simBehavior.kind === 'flowControl') {
+      const multiplier = node.state?.flowMultiplier ?? component.simBehavior.flowMultiplier ?? 1.0;
+      restrictions.push({
+        nodeId: node.instanceId,
+        type: 'flowControl',
+        flowMultiplier: Math.max(0.05, Math.min(1.0, multiplier)),
+      });
+    }
+
+    if (component.simBehavior.kind === 'auxiliary' && component.symbolVariant?.style === 'pressure-relief') {
+      const crackingPressure = node.state?.crackingPressure ?? 80;
+      restrictions.push({
+        nodeId: node.instanceId,
+        type: 'reliefValve',
+        crackingPressure,
+      });
+    }
+
+    if (Array.isArray(node.state?.faults)) {
+      for (const fault of node.state.faults) {
+        if (fault.type === 'clogged-filter') {
+          restrictions.push({ nodeId: node.instanceId, type: 'clogged', flowMultiplier: 0.2 });
+        }
+        if (fault.type === 'worn-pump') {
+          restrictions.push({ nodeId: node.instanceId, type: 'wornPump', flowMultiplier: 0.4 });
+        }
+        if (fault.type === 'low-prv') {
+          restrictions.push({ nodeId: node.instanceId, type: 'lowPrv', crackingPressure: 20 });
+        }
+      }
+    }
+  }
+
+  return restrictions;
+};
+
+export const computeReadings = (activePorts, activeConnections, nodes, nodeLookup) => {
+  const readings = {};
+
+  for (const node of nodeLookup.values()) {
+    const component = getComponentDefinition(node.componentId);
+    if (!component) {
+      continue;
+    }
+
+    const isInstrument =
+      component.symbol === 'instrument' ||
+      component.simBehavior.kind === 'instrument';
+
+    if (!isInstrument) {
+      continue;
+    }
+
+    const nodeIsActive = activePorts.some((pk) => pk.startsWith(`${node.instanceId}:`));
+    if (!nodeIsActive) {
+      readings[node.instanceId] = { pressure: 0, flowRate: 0, active: false };
+      continue;
+    }
+
+    const style = component.symbolVariant?.style;
+    let pressure = BASE_SYSTEM_PRESSURE * 0.85;
+    let flowRate = BASE_FLOW_RATE * 0.9;
+
+    for (const portRef of activePorts) {
+      if (!portRef.startsWith(`${node.instanceId}:`)) {
+        continue;
+      }
+    }
+
+    const restrictions = collectRestrictionsOnPath(activePorts, nodeLookup);
+    for (const r of restrictions) {
+      if (r.type === 'flowControl' || r.type === 'clogged' || r.type === 'wornPump') {
+        flowRate *= r.flowMultiplier;
+        pressure *= (0.6 + 0.4 * r.flowMultiplier);
+      }
+      if (r.type === 'reliefValve' || r.type === 'lowPrv') {
+        const cracking = r.crackingPressure ?? 80;
+        if (pressure > cracking) {
+          pressure = cracking;
+          flowRate *= 0.3;
+        }
+      }
+    }
+
+    readings[node.instanceId] = {
+      pressure: style === 'manometer' || style === 'pressure-switch'
+        ? Math.round(pressure * 10) / 10
+        : null,
+      flowRate: style === 'flowmeter' || style === 'counter'
+        ? Math.round(flowRate * 10) / 10
+        : null,
+      active: true,
+      unit: style === 'manometer' || style === 'pressure-switch' ? 'bar' : 'L/min',
+    };
+  }
+
+  return readings;
+};
+
+export const computeActuatorTiming = (actuatorNode, actuatorComponent, activePorts, nodeLookup) => {
+  if (!actuatorNode || actuatorComponent?.simBehavior?.kind !== 'actuator') {
+    return null;
+  }
+
+  const isActive = activePorts.some((pk) => pk.startsWith(`${actuatorNode.instanceId}:`));
+  if (!isActive) {
+    return null;
+  }
+
+  let flowMultiplier = 1.0;
+  for (const portKey of activePorts) {
+    const [nodeId] = portKey.split(':');
+    const node = nodeLookup.get(nodeId);
+    if (!node) {
+      continue;
+    }
+    const comp = getComponentDefinition(node.componentId);
+    if (comp?.simBehavior?.kind === 'flowControl') {
+      const m = node.state?.flowMultiplier ?? comp.simBehavior.flowMultiplier ?? 1.0;
+      flowMultiplier = Math.min(flowMultiplier, m);
+    }
+  }
+
+  const baseStrokeTime = actuatorComponent.simBehavior.actuatorType === 'rotary' ? 3.0 : 2.0;
+  const actualStrokeTime = baseStrokeTime / Math.max(0.05, flowMultiplier);
+
+  return {
+    baseStrokeTime,
+    flowMultiplier: Math.round(flowMultiplier * 100) / 100,
+    actualStrokeTime: Math.round(actualStrokeTime * 10) / 10,
+    unit: 's',
+  };
+};

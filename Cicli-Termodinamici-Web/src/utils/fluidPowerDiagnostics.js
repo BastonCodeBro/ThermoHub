@@ -115,7 +115,7 @@ export const diagnoseFluidWorkspace = (workspace, domain) => {
       .filter((port) => !connectedPortKeys.has(toPortKey(node.instanceId, port.id)))
       .forEach((port) => {
         pushIssue(issues, {
-          severity: component.simBehavior.kind === 'display' ? 'info' : 'warning',
+          severity: component.simBehavior.kind === 'display' || component.simBehavior.kind === 'instrument' ? 'info' : 'warning',
           code: 'open-port',
           title: `Porta aperta ${port.label}`,
           description: `${node.label} ha la porta ${port.label} ancora non collegata.`,

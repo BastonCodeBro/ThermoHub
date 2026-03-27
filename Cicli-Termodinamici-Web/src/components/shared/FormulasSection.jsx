@@ -71,7 +71,15 @@ const FormulasSection = ({ points, formulas, coordTitle = 'Coordinate Termodinam
                 {f.label && (
                   <span className="formula-label">{f.label}</span>
                 )}
-                <KaTeX math={f.latex} display={!!f.display} color={accentColor} />
+                {f.description && !f.latex && (
+                  <span className="formula-description">{f.description}</span>
+                )}
+                {f.description && f.latex && (
+                  <span className="formula-description">{f.description}</span>
+                )}
+                {f.latex && (
+                  <KaTeX math={f.latex} display={!!f.display} color={accentColor} />
+                )}
                 {f.value !== undefined && (
                   <span className="formula-value">
                     {' = '}
