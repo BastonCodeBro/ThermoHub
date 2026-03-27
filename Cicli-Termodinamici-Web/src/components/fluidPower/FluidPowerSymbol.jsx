@@ -492,10 +492,18 @@ const renderSymbol = (component, color) => {
         <>
           <Box border={color} />
           <rect x="34" y="36" width="72" height="24" rx="6" fill="none" stroke={color} strokeWidth="3" />
+          <path
+            d="M78 58 L84 38 L90 58 L96 38 L102 58"
+            fill="none"
+            stroke="#94A3B8"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           <line x1="106" y1="48" x2="138" y2="48" stroke={color} strokeWidth="3" />
           <circle cx="141" cy="48" r="4" fill={color} />
           <path d="M24 48 H34" stroke={color} strokeWidth="3" />
-          <path d="M20 38 L28 48 L20 58" fill="none" stroke="#94A3B8" strokeWidth="2" />
+          <text x="112" y="30" fill="#94A3B8" fontSize="10" fontWeight="800">molla</text>
         </>
       );
     case 'double-cylinder':
@@ -644,9 +652,14 @@ const renderMotionOverlay = (component, motionState, color) => {
     component.symbol === 'cylinder-advanced'
   ) {
     const reverse = typeof motionState === 'string' && motionState.includes('ritra');
+    const arrowStartX = reverse ? 118 : 42;
+    const arrowEndX = reverse ? 48 : 112;
+    const arrowTip = reverse ? '48,28 60,22 60,34' : '112,28 100,22 100,34';
 
     return (
       <g opacity="0.92">
+        <path d={`M${arrowStartX} 28 H${arrowEndX}`} stroke={color} strokeWidth="3" className="fluid-symbol-flow" />
+        <polygon points={arrowTip} fill={color} className="fluid-symbol-glow" />
         <rect
           x="46"
           y="38"
@@ -658,6 +671,16 @@ const renderMotionOverlay = (component, motionState, color) => {
           stroke={color}
           strokeWidth="2"
           className={`fluid-symbol-piston ${reverse ? 'fluid-symbol-piston-reverse' : ''}`}
+        />
+        <rect
+          x={reverse ? '84' : '34'}
+          y="36"
+          width={reverse ? '22' : '26'}
+          height="24"
+          rx="4"
+          fill={color}
+          fillOpacity="0.16"
+          className="fluid-symbol-glow"
         />
         <path
           d="M92 48 H132"

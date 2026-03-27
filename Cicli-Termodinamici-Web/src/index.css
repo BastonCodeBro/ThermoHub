@@ -2181,6 +2181,36 @@ p { margin: 0; }
   color: var(--text);
 }
 
+.fluid-node-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.fluid-node-motion-badge,
+.fluid-node-teaching-note {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.fluid-node-motion-badge {
+  background: rgba(249, 115, 22, 0.18);
+  border: 1px solid rgba(249, 115, 22, 0.32);
+  color: #FDBA74;
+}
+
+.fluid-node-teaching-note {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #CBD5E1;
+}
+
 .fluid-node-toggle {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.05);
@@ -2821,19 +2851,19 @@ p { margin: 0; }
 
 @keyframes fluidPistonExtend {
   from {
-    transform: translateX(-2px);
+    transform: translateX(-4px);
   }
   to {
-    transform: translateX(7px);
+    transform: translateX(12px);
   }
 }
 
 @keyframes fluidPistonRetract {
   from {
-    transform: translateX(7px);
+    transform: translateX(12px);
   }
   to {
-    transform: translateX(-2px);
+    transform: translateX(-4px);
   }
 }
 

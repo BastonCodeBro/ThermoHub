@@ -364,6 +364,50 @@ const modeDescription = (mode) =>
     ? 'Vista tecnica piu densa per leggere stato, porte e struttura del circuito.'
     : 'Vista semplificata con checklist, esito del circuito e spiegazioni passo passo.';
 
+const getComponentTeachingNote = (component) => {
+  if (component?.simBehavior?.kind === 'actuator') {
+    if (component.simBehavior.actuatorType === 'single') {
+      return '1 porta, ritorno a molla';
+    }
+
+    if (component.simBehavior.actuatorType === 'double') {
+      return '2 porte di lavoro';
+    }
+  }
+
+  if (component?.simBehavior?.kind === 'valve') {
+    return `${component.simBehavior.family} ${component.simBehavior.workPorts?.length === 1 ? 'per singolo effetto' : 'per doppio effetto'}`;
+  }
+
+  return null;
+};
+
+const getMotionBadgeLabel = (component, motionState, isRunning) => {
+  if (!isRunning || !motionState) {
+    return null;
+  }
+
+  if (component?.simBehavior?.kind === 'actuator') {
+    if (motionState.includes('ritra')) {
+      return 'Rientra';
+    }
+
+    if (motionState.includes('esten')) {
+      return 'Estende';
+    }
+
+    if (motionState.includes('rotazione')) {
+      return motionState;
+    }
+  }
+
+  if (component?.simBehavior?.kind === 'valve') {
+    return 'Flusso instradato';
+  }
+
+  return 'Flusso attivo';
+};
+
 const getNodeCounts = (workspace) => {
   const counts = {
     source: 0,
@@ -1334,10 +1378,16 @@ const FluidPowerLabPage = () => {
                   const isSelected =
                     workspace.selectedEntity?.type === 'node' && workspace.selectedEntity.id === node.instanceId;
                   const isActive = workspace.snapshot.activeNodes.includes(node.instanceId);
+                  const teachingNote = getComponentTeachingNote(component);
                   const motionState =
                     workspace.snapshot.isRunning && isActive
                       ? workspace.snapshot.actuatorAction ?? 'flow'
                       : null;
+                  const motionBadge = getMotionBadgeLabel(
+                    component,
+                    motionState,
+                    workspace.snapshot.isRunning && isActive,
+                  );
 
                   return (
                     <div
@@ -1356,8 +1406,8 @@ const FluidPowerLabPage = () => {
                           selectedEntity: { type: 'node', id: node.instanceId },
                         }))
                       }
-                    >
-                      <div className="fluid-node-header">
+                      >
+                        <div className="fluid-node-header">
                         <span className="fluid-node-title">{node.label}</span>
                         {component.simBehavior.kind === 'valve' && (
                           <button
@@ -1375,6 +1425,12 @@ const FluidPowerLabPage = () => {
                         label={node.label}
                         motionState={motionState}
                       />
+                      {(motionBadge || teachingNote) && (
+                        <div className="fluid-node-footer">
+                          {motionBadge && <span className="fluid-node-motion-badge">{motionBadge}</span>}
+                          {teachingNote && <span className="fluid-node-teaching-note">{teachingNote}</span>}
+                        </div>
+                      )}
                       {component.ports.map((port) => {
                         const position = getPortPosition(node, component, port);
                         const portKey = `${node.instanceId}:${port.id}`;
