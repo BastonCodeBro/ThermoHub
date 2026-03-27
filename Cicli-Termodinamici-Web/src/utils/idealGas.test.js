@@ -4,7 +4,10 @@ import {
   calcBraytonCycle,
   calcCarnotCycle,
   calcDieselCycle,
+  calcDualCycle,
   calcOttoCycle,
+  calcRegenerativeBraytonCycle,
+  calcReverseCarnotCycle,
   createIdealGasPoint,
   generateIdealGasPath,
 } from './idealGas';
@@ -90,6 +93,68 @@ describe('idealGas cycle calculators', () => {
     expect(result.points).toHaveLength(4);
     expect(result.stats.Q_in).toBeGreaterThan(result.stats.Q_out);
     expectClose(result.stats.eta, expectedEta, 1e-9);
+  });
+
+  test('Dual cycle splits heat addition into isochoric and isobaric parts', () => {
+    const result = calcDualCycle({
+      p1Bar: 1,
+      t1C: 25,
+      r: 16,
+      alpha: 1.4,
+      rc: 1.3,
+      eta: 1,
+      massFlow: 1,
+    });
+
+    expect(result.points).toHaveLength(5);
+    expect(result.stats.q_in_cv).toBeGreaterThan(0);
+    expect(result.stats.q_in_cp).toBeGreaterThan(0);
+    expectClose(result.stats.q_in, result.stats.q_in_cv + result.stats.q_in_cp, 1e-9);
+  });
+
+  test('Regenerative Brayton does not worsen efficiency when epsilon increases', () => {
+    const simple = calcBraytonCycle({
+      p1Bar: 1,
+      t1C: 20,
+      p2Bar: 8,
+      t3C: 950,
+      etaComp: 0.85,
+      etaTurb: 0.88,
+      massFlow: 1,
+    });
+
+    const regenerative = calcRegenerativeBraytonCycle({
+      p1Bar: 1,
+      t1C: 20,
+      p2Bar: 8,
+      t3C: 950,
+      etaComp: 0.85,
+      etaTurb: 0.88,
+      epsilonReg: 0.75,
+      massFlow: 1,
+    });
+
+    expect(regenerative.realPoints).toHaveLength(6);
+    expect(regenerative.stats.regen_gain).toBeGreaterThanOrEqual(0);
+    expect(regenerative.stats.eta).toBeGreaterThanOrEqual(simple.stats.eta - 1e-9);
+  });
+
+  test('Reverse Carnot reports theoretical COP values', () => {
+    const tHighC = 35;
+    const tLowC = -5;
+    const result = calcReverseCarnotCycle({
+      tHighC,
+      tLowC,
+      pRefBar: 2,
+      ds: 0.5,
+      massFlow: 1,
+    });
+
+    const th = tHighC + 273.15;
+    const tl = tLowC + 273.15;
+    expect(result.points).toHaveLength(4);
+    expectClose(result.stats.cop, tl / (th - tl), 1e-9);
+    expectClose(result.stats.cop_hp, th / (th - tl), 1e-9);
   });
 });
 

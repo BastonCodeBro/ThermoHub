@@ -1,7 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, ChevronDown, Move, Play, RotateCcw, Trash2, Waves } from 'lucide-react';
 import {
-  createInitialNodeState,
+  Activity,
+  ChevronDown,
+  Download,
+  GraduationCap,
+  Move,
+  Play,
+  RotateCcw,
+  Trash2,
+  Upload,
+  Waves,
+  Wrench,
+} from 'lucide-react';
+import {
   FLUID_POWER_CATEGORIES,
   FLUID_POWER_DOMAINS,
   getComponentDefinition,
@@ -14,6 +25,15 @@ import {
   getValveRouteInfo,
   validateCircuit,
 } from '../utils/fluidPowerSimulation';
+import {
+  buildBillOfMaterials,
+  createDraftNodePayload,
+  createProjectMeta,
+  FLUID_POWER_PROJECT_STORAGE_KEY,
+  hydrateProjectDocument,
+  serializeProjectDocument,
+  touchProjectMeta,
+} from '../utils/fluidPowerProject';
 
 const GRID_SIZE = 24;
 const CANVAS_WIDTH = 1160;
@@ -36,6 +56,30 @@ const CATEGORY_COPY = {
   'simbologia-base': 'Segni grafici di supporto per ripassare la simbologia ISO del fluid power.',
 };
 
+const MODE_OPTIONS = [
+  {
+    id: 'didactic',
+    label: 'Studente',
+    description: 'Feedback semplice, checklist ed esito guidato del circuito.',
+    Icon: GraduationCap,
+  },
+  {
+    id: 'engineering',
+    label: 'Ingegnere',
+    description: 'Vista tecnica con inspector, porte e stato interno del circuito.',
+    Icon: Wrench,
+  },
+];
+
+const KIND_LABELS = {
+  source: 'Sorgente',
+  valve: 'Distributore',
+  actuator: 'Utilizzatore',
+  sink: 'Ritorno / scarico',
+  conditioning: 'Condizionamento',
+  auxiliary: 'Ausiliario',
+};
+
 const createExpandedGroupState = () =>
   Object.fromEntries(
     FLUID_POWER_DOMAINS.map(({ id: domainId }) => [
@@ -52,8 +96,13 @@ const createExpandedGroupState = () =>
 const createWorkspace = () => ({
   nodes: [],
   connections: [],
+  nets: [],
   pendingPort: null,
   selectedEntity: null,
+  lastRun: null,
+  baselineRun: null,
+  scenarioId: 'startup-sequence',
+  timelineStep: 0,
   snapshot: {
     isRunning: false,
     activePorts: [],
@@ -296,30 +345,208 @@ const guidedCircuits = [
   'Compressore + gruppo FRL + distributore + cilindro come catena minima pneumatica.',
 ];
 
+const studentWorkflow = [
+  'Costruisci la catena minima: sorgente, distributore, utilizzatore e ritorno/scarico.',
+  'Avvia lo schema per verificare se il percorso del fluido raggiunge davvero l utilizzatore.',
+  'Se il circuito non funziona, leggi l esito e correggi un errore alla volta.',
+];
+
+const engineeringWorkflow = [
+  'Usa il canvas per controllare porte, instradamento e stato dei distributori.',
+  'Seleziona un elemento per leggere dettagli tecnici, connessioni e coordinate.',
+  'Esporta o importa il progetto JSON per mantenere lo stesso assetto tra piu sessioni.',
+];
+
+const modeLabel = (mode) => (mode === 'engineering' ? 'Ingegnere' : 'Studente');
+
+const modeDescription = (mode) =>
+  mode === 'engineering'
+    ? 'Vista tecnica piu densa per leggere stato, porte e struttura del circuito.'
+    : 'Vista semplificata con checklist, esito del circuito e spiegazioni passo passo.';
+
+const getNodeCounts = (workspace) => {
+  const counts = {
+    source: 0,
+    valve: 0,
+    actuator: 0,
+    sink: 0,
+  };
+
+  workspace.nodes.forEach((node) => {
+    const component = getComponentDefinition(node.componentId);
+    const kind = component?.simBehavior?.kind;
+
+    if (kind && counts[kind] !== undefined) {
+      counts[kind] += 1;
+    }
+  });
+
+  return counts;
+};
+
+const buildDidacticChecklist = (workspace, validation) => {
+  const counts = getNodeCounts(workspace);
+
+  return [
+    { id: 'source', label: 'Sorgente presente', done: counts.source > 0 },
+    { id: 'valve', label: 'Distributore presente', done: counts.valve > 0 },
+    { id: 'actuator', label: 'Utilizzatore presente', done: counts.actuator > 0 },
+    { id: 'sink', label: 'Ritorno o scarico presente', done: counts.sink > 0 },
+    { id: 'simulation', label: 'Schema simulabile', done: validation.valid || workspace.snapshot.isRunning },
+  ];
+};
+
+const buildDidacticFeedback = (workspace, validation, domainMeta) => {
+  const warnings = workspace.snapshot.warnings ?? [];
+  const hasWarnings = warnings.length > 0;
+  const summary = workspace.snapshot.summary;
+  const action = workspace.snapshot.actuatorAction;
+
+  if (workspace.snapshot.isRunning) {
+    return {
+      verdict: 'Funziona',
+      tone: 'success',
+      summary: `Il ${domainMeta.fluidLabel.toLowerCase()} arriva al circuito utile e produce ${action ?? 'un azionamento corretto'}.`,
+      nextSuggestion: 'Prova a commutare il distributore per osservare una seconda configurazione del circuito.',
+      flowExplanation: summary
+        ? `${summary.sourceLabel} alimenta ${summary.valveLabel}, che porta il flusso verso ${summary.actuatorLabel}.`
+        : 'La sorgente alimenta il distributore e il distributore comanda l utilizzatore.',
+    };
+  }
+
+  if (hasWarnings && validation.valid) {
+    return {
+      verdict: 'Errato',
+      tone: 'error',
+      summary: warnings[0],
+      nextSuggestion: 'Controlla soprattutto la posizione del distributore e i collegamenti che raggiungono l utilizzatore.',
+      flowExplanation: 'Il circuito ha gli elementi giusti, ma nella configurazione attuale il flusso non comanda correttamente l utilizzatore.',
+    };
+  }
+
+  if (validation.valid) {
+    return {
+      verdict: 'Incompleto',
+      tone: 'info',
+      summary: 'Lo schema e pronto, ma non e ancora stato avviato nella configurazione corrente.',
+      nextSuggestion: 'Avvia lo schema o commuta il distributore se vuoi vedere il movimento dell attuatore.',
+      flowExplanation: 'Il circuito contiene gia la catena minima: ora va verificata la direzione del flusso in simulazione.',
+    };
+  }
+
+  return {
+    verdict: 'Incompleto',
+    tone: 'warning',
+    summary: validation.warnings?.[0] ?? 'Completa la catena minima prima di avviare la simulazione.',
+    nextSuggestion: 'Parti sempre da sorgente, distributore, utilizzatore e ritorno o scarico.',
+    flowExplanation: 'Finche manca uno di questi elementi il simulatore non puo chiudere il percorso del fluido.',
+  };
+};
+
+const buildInspector = (workspace) => {
+  if (!workspace.selectedEntity) {
+    return {
+      title: 'Nessuna selezione',
+      subtitle: 'Seleziona un componente o un collegamento nel canvas per vedere i dettagli tecnici.',
+      rows: [],
+      ports: [],
+    };
+  }
+
+  if (workspace.selectedEntity.type === 'connection') {
+    const connection = workspace.connections.find((item) => item.id === workspace.selectedEntity.id);
+
+    if (!connection) {
+      return {
+        title: 'Collegamento non disponibile',
+        subtitle: 'La selezione corrente non e piu presente nel canvas.',
+        rows: [],
+        ports: [],
+      };
+    }
+
+    const fromNode = workspace.nodes.find((node) => node.instanceId === connection.from.nodeId);
+    const toNode = workspace.nodes.find((node) => node.instanceId === connection.to.nodeId);
+
+    return {
+      title: 'Collegamento selezionato',
+      subtitle: `${fromNode?.label ?? connection.from.nodeId} -> ${toNode?.label ?? connection.to.nodeId}`,
+      rows: [
+        ['Tipo', connection.kind === 'mechanical' ? 'Meccanico' : 'Fluido'],
+        ['Dominio', connection.domain],
+        ['Porta origine', connection.from.portId],
+        ['Porta arrivo', connection.to.portId],
+        [
+          'Stato',
+          workspace.snapshot.activeConnections.includes(connection.id) ? 'Attivo in simulazione' : 'In attesa',
+        ],
+      ],
+      ports: [],
+    };
+  }
+
+  const node = workspace.nodes.find((item) => item.instanceId === workspace.selectedEntity.id);
+  const component = node ? getComponentDefinition(node.componentId) : null;
+
+  if (!node || !component) {
+    return {
+      title: 'Componente non disponibile',
+      subtitle: 'La selezione corrente non e piu presente nel canvas.',
+      rows: [],
+      ports: [],
+    };
+  }
+
+  const connectionCount = workspace.connections.filter(
+    (connection) =>
+      connection.from.nodeId === node.instanceId || connection.to.nodeId === node.instanceId,
+  ).length;
+
+  return {
+    title: node.label,
+    subtitle: component.label,
+    rows: [
+      ['Famiglia', KIND_LABELS[component.simBehavior.kind] ?? 'Componente'],
+      ['Biblioteca', node.libraryId ?? component.id],
+      ['Vendor ref', node.vendorRef?.trim() ? node.vendorRef : 'n/d'],
+      ['Porte collegate', `${connectionCount}`],
+      ['Posizione', `${node.x}, ${node.y}`],
+      ['Rotazione', `${node.rotation ?? 0} deg`],
+      [
+        'Stato interno',
+        node.state?.currentState ? node.state.currentState : describeActuatorState(node, component),
+      ],
+      [
+        'Attivo',
+        workspace.snapshot.activeNodes.includes(node.instanceId) ? 'Si' : 'No',
+      ],
+    ],
+    ports: component.ports.map((port) => `${port.label} (${port.side})`),
+  };
+};
+
 const FluidPowerLabPage = () => {
+  const [projectMeta, setProjectMeta] = useState(() => createProjectMeta());
   const [domain, setDomain] = useState('hydraulic');
   const [search, setSearch] = useState('');
+  const [storageStatus, setStorageStatus] = useState('Autosave locale pronto.');
   const [workspaces, setWorkspaces] = useState({
     hydraulic: createWorkspace(),
     pneumatic: createWorkspace(),
   });
   const [expandedGroups, setExpandedGroups] = useState(createExpandedGroupState);
   const [draggingNode, setDraggingNode] = useState(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
+  const importInputRef = useRef(null);
 
   const workspace = workspaces[domain];
   const domainMeta = getDomainMeta(domain);
   const groups = useMemo(() => paletteGroups(domain, search), [domain, search]);
   const hasSearch = search.trim().length > 0;
+  const isStudentMode = projectMeta.mode !== 'engineering';
 
-  const updateWorkspace = useCallback((updater) => {
-    setWorkspaces((current) => ({
-      ...current,
-      [domain]: updater(current[domain]),
-    }));
-  }, [domain]);
-
-  const refreshPaths = (nodes, connections) =>
+  const refreshPaths = useCallback((nodes, connections) =>
     connections.map((connection) => {
       const fromNode = nodes.find((node) => node.instanceId === connection.from.nodeId);
       const toNode = nodes.find((node) => node.instanceId === connection.to.nodeId);
@@ -343,7 +570,91 @@ const FluidPowerLabPage = () => {
         ...connection,
         pathPoints: points,
       };
-    });
+    }), []);
+
+  const normalizeWorkspace = useCallback((incomingWorkspace) => {
+    const base = createWorkspace();
+    const mergedWorkspace = {
+      ...base,
+      ...incomingWorkspace,
+    };
+
+    return {
+      ...mergedWorkspace,
+      nodes: incomingWorkspace?.nodes ?? base.nodes,
+      connections: refreshPaths(
+        incomingWorkspace?.nodes ?? base.nodes,
+        incomingWorkspace?.connections ?? base.connections,
+      ),
+      pendingPort: null,
+      selectedEntity: incomingWorkspace?.selectedEntity ?? null,
+      snapshot: incomingWorkspace?.snapshot ?? base.snapshot,
+      message: incomingWorkspace?.message ?? base.message,
+    };
+  }, [refreshPaths]);
+
+  useEffect(() => {
+    try {
+      const rawDocument = window.localStorage.getItem(FLUID_POWER_PROJECT_STORAGE_KEY);
+
+      if (!rawDocument) {
+        setIsHydrated(true);
+        return;
+      }
+
+      const hydrated = hydrateProjectDocument(rawDocument, createWorkspace);
+
+      setProjectMeta(hydrated.meta);
+      setWorkspaces({
+        hydraulic: normalizeWorkspace(hydrated.workspaces.hydraulic),
+        pneumatic: normalizeWorkspace(hydrated.workspaces.pneumatic),
+      });
+      setStorageStatus('Progetto locale ripristinato.');
+    } catch {
+      setStorageStatus('Autosave locale non valido: viene ignorato.');
+    } finally {
+      setIsHydrated(true);
+    }
+  }, [normalizeWorkspace]);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    try {
+      const serialized = serializeProjectDocument(projectMeta, workspaces);
+      window.localStorage.setItem(FLUID_POWER_PROJECT_STORAGE_KEY, serialized);
+      setStorageStatus('Autosave locale aggiornato.');
+    } catch {
+      setStorageStatus('Impossibile salvare il progetto nel browser.');
+    }
+  }, [isHydrated, projectMeta, workspaces]);
+
+  const validation = useMemo(
+    () => validateCircuit(workspace.nodes, workspace.connections, domain),
+    [workspace.connections, workspace.nodes, domain],
+  );
+
+  const didacticChecklist = useMemo(
+    () => buildDidacticChecklist(workspace, validation),
+    [workspace, validation],
+  );
+
+  const didacticFeedback = useMemo(
+    () => buildDidacticFeedback(workspace, validation, domainMeta),
+    [workspace, validation, domainMeta],
+  );
+
+  const inspector = useMemo(() => buildInspector(workspace), [workspace]);
+  const bomItems = useMemo(() => buildBillOfMaterials(workspace), [workspace]);
+
+  const updateWorkspace = useCallback((updater) => {
+    setWorkspaces((current) => ({
+      ...current,
+      [domain]: updater(current[domain]),
+    }));
+  }, [domain]);
 
   const addNode = (componentId, dropPosition) => {
     const component = getComponentDefinition(componentId);
@@ -353,16 +664,18 @@ const FluidPowerLabPage = () => {
 
     updateWorkspace((current) => {
       const existingCount = current.nodes.filter((node) => node.componentId === componentId).length;
-      const node = {
-        instanceId: createNodeId(),
+      const nextLabel = `${component.label} ${existingCount + 1}`;
+      const node = createDraftNodePayload(
         componentId,
-        domain: component.domain,
-        x: snap(dropPosition?.x ?? 48 + (existingCount % 3) * 192),
-        y: snap(dropPosition?.y ?? 56 + Math.floor(existingCount / 3) * 144),
-        rotation: 0,
-        label: `${component.label} ${existingCount + 1}`,
-        state: createInitialNodeState(component),
-      };
+        createNodeId(),
+        snap(dropPosition?.x ?? 48 + (existingCount % 3) * 192),
+        snap(dropPosition?.y ?? 56 + Math.floor(existingCount / 3) * 144),
+        nextLabel,
+      );
+
+      if (!node) {
+        return current;
+      }
 
       return {
         ...current,
@@ -422,7 +735,7 @@ const FluidPowerLabPage = () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [draggingNode, domain, updateWorkspace]);
+  }, [draggingNode, domain, refreshPaths, updateWorkspace]);
 
   const handleNodePointerDown = (event, node) => {
     if (event.target.closest('[data-port-button="true"]') || event.target.closest('button')) {
@@ -622,15 +935,15 @@ const FluidPowerLabPage = () => {
 
   const startSimulation = () => {
     updateWorkspace((current) => {
-      const validation = validateCircuit(current.nodes, current.connections, domain);
-      if (!validation.valid) {
+      const currentValidation = validateCircuit(current.nodes, current.connections, domain);
+      if (!currentValidation.valid) {
         return {
           ...current,
           snapshot: {
             ...createWorkspace().snapshot,
-            warnings: validation.warnings,
+            warnings: currentValidation.warnings,
           },
-          message: validation.warnings[0],
+          message: currentValidation.warnings[0],
         };
       }
 
@@ -660,16 +973,84 @@ const FluidPowerLabPage = () => {
     });
   };
 
+  const handleModeChange = (mode) => {
+    if (projectMeta.mode === mode) {
+      return;
+    }
+
+    setProjectMeta((current) => touchProjectMeta({
+      ...current,
+      mode,
+    }));
+
+    updateWorkspace((current) => ({
+      ...current,
+      message:
+        mode === 'engineering'
+          ? 'Vista tecnica attiva: seleziona componenti e collegamenti per leggerne i dettagli.'
+          : 'Modalita studente attiva: usa checklist, esito e suggerimenti per capire il circuito.',
+    }));
+  };
+
+  const handleExportProject = () => {
+    try {
+      const serialized = serializeProjectDocument(projectMeta, workspaces);
+      const blob = new Blob([serialized], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      const dateStamp = new Date().toISOString().slice(0, 10);
+
+      anchor.href = url;
+      anchor.download = `fluid-power-${projectMeta.mode}-${dateStamp}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+      setStorageStatus('Progetto esportato in JSON.');
+    } catch {
+      setStorageStatus('Impossibile esportare il progetto.');
+    }
+  };
+
+  const openImportDialog = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportProject = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const rawDocument = await file.text();
+      const hydrated = hydrateProjectDocument(rawDocument, createWorkspace);
+
+      setProjectMeta(hydrated.meta);
+      setWorkspaces({
+        hydraulic: normalizeWorkspace(hydrated.workspaces.hydraulic),
+        pneumatic: normalizeWorkspace(hydrated.workspaces.pneumatic),
+      });
+      setStorageStatus('Progetto importato dal file JSON.');
+    } catch {
+      setStorageStatus('Il file selezionato non e un progetto Fluid Power valido.');
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   return (
     <section className="features-section cycle-page fluid-power-page">
       <div className="section-header">
-        <div className="section-badge">Nuova sezione didattica</div>
+        <div className="section-badge">{`Modalita ${modeLabel(projectMeta.mode)}`}</div>
         <h2 className="section-title">
           Impianti <span style={{ color: domainMeta.accent }}>Oleodinamici / Pneumatici</span>
         </h2>
         <p className="hero-description fluid-page-description">
-          Costruisci un circuito libero, collega le porte e avvia una simulazione visiva per capire
-          il percorso del fluido e l'azione dei distributori.
+          {isStudentMode
+            ? 'Costruisci un circuito, avvialo e capisci subito se il percorso del fluido funziona davvero.'
+            : 'Analizza il circuito con una vista tecnica piu ricca, mantenendo lo stesso editor e la stessa simulazione.'}
         </p>
       </div>
 
@@ -688,7 +1069,9 @@ const FluidPowerLabPage = () => {
             <div>
               <div className="section-subtitle">Catalogo componenti</div>
               <p className="section-note">
-                Palette piu compatta e divisa per famiglie per comporre lo schema con meno scroll.
+                {isStudentMode
+                  ? 'Palette compatta e organizzata per montare lo schema senza perdersi nei componenti.'
+                  : 'Palette tecnica per costruire e leggere il circuito mantenendo i riferimenti simbolici.'}
               </p>
             </div>
           </div>
@@ -796,38 +1179,89 @@ const FluidPowerLabPage = () => {
 
         <div className="fluid-workspace">
           <div className="fluid-toolbar glass">
-            <div className="fluid-toolbar-actions">
-              <button className="btn-primary fluid-toolbar-btn" onClick={startSimulation}>
-                <Play size={18} />
-                Avvia schema
-              </button>
-              <button className="btn-outline fluid-toolbar-btn" onClick={resetSimulation}>
-                <RotateCcw size={18} />
-                Reset simulazione
-              </button>
-              <button className="btn-outline fluid-toolbar-btn" onClick={clearWorkspace}>
-                <Trash2 size={18} />
-                Pulisci schema
-              </button>
-              <button className="btn-outline fluid-toolbar-btn" onClick={removeSelectedEntity}>
-                <Trash2 size={18} />
-                Elimina selezione
-              </button>
+            <div className="fluid-toolbar-top">
+              <div className="fluid-toolbar-actions">
+                <button className="btn-primary fluid-toolbar-btn" onClick={startSimulation}>
+                  <Play size={18} />
+                  Avvia schema
+                </button>
+                <button className="btn-outline fluid-toolbar-btn" onClick={resetSimulation}>
+                  <RotateCcw size={18} />
+                  Reset simulazione
+                </button>
+                <button className="btn-outline fluid-toolbar-btn" onClick={clearWorkspace}>
+                  <Trash2 size={18} />
+                  Pulisci schema
+                </button>
+                <button className="btn-outline fluid-toolbar-btn" onClick={removeSelectedEntity}>
+                  <Trash2 size={18} />
+                  Elimina selezione
+                </button>
+              </div>
+
+              <div className="fluid-mode-switch" role="group" aria-label="Modalita laboratorio">
+                <span className="fluid-mode-switch-label">Modalita</span>
+                {MODE_OPTIONS.map((option) => {
+                  const Icon = option.Icon;
+                  const active = projectMeta.mode === option.id;
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`fluid-mode-option ${active ? 'fluid-mode-option-active' : ''}`}
+                      onClick={() => handleModeChange(option.id)}
+                      aria-pressed={active}
+                    >
+                      <Icon size={16} />
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="fluid-status-strip">
-              <div className="fluid-status-chip">
-                <Move size={16} />
-                <span>{workspace.nodes.length} componenti</span>
+
+            <div className="fluid-toolbar-bottom">
+              <div className="fluid-toolbar-actions fluid-toolbar-actions-secondary">
+                <button className="btn-outline fluid-toolbar-btn" onClick={handleExportProject}>
+                  <Download size={18} />
+                  Esporta JSON
+                </button>
+                <button className="btn-outline fluid-toolbar-btn" onClick={openImportDialog}>
+                  <Upload size={18} />
+                  Importa JSON
+                </button>
               </div>
-              <div className="fluid-status-chip">
-                <Waves size={16} />
-                <span>{workspace.connections.length} collegamenti</span>
-              </div>
-              <div className="fluid-status-chip">
-                <Activity size={16} />
-                <span>{workspace.snapshot.isRunning ? 'Schema attivo' : 'Schema fermo'}</span>
+
+              <div className="fluid-status-strip">
+                <div className="fluid-status-chip">
+                  <Move size={16} />
+                  <span>{workspace.nodes.length} componenti</span>
+                </div>
+                <div className="fluid-status-chip">
+                  <Waves size={16} />
+                  <span>{workspace.connections.length} collegamenti</span>
+                </div>
+                <div className="fluid-status-chip">
+                  <Activity size={16} />
+                  <span>{workspace.snapshot.isRunning ? 'Schema attivo' : 'Schema fermo'}</span>
+                </div>
               </div>
             </div>
+
+            <div className="fluid-storage-note">
+              <strong>{modeLabel(projectMeta.mode)}</strong>
+              <span>{modeDescription(projectMeta.mode)}</span>
+              <em>{storageStatus}</em>
+            </div>
+
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="fluid-hidden-input"
+              onChange={handleImportProject}
+            />
           </div>
 
           <div className="fluid-canvas-panel glass">
@@ -835,7 +1269,9 @@ const FluidPowerLabPage = () => {
               <div>
                 <div className="section-subtitle">Canvas di simulazione</div>
                 <p className="section-note">
-                  Trascina i simboli, clicca le porte per collegarle e commuta i distributori prima di avviare.
+                  {isStudentMode
+                    ? 'Trascina i simboli, collega le porte e guarda se il circuito compie davvero l azione attesa.'
+                    : 'Trascina i simboli, collega le porte e controlla la struttura tecnica del circuito selezionato.'}
                 </p>
               </div>
               <div className="fluid-message-banner">{workspace.message}</div>
@@ -982,68 +1418,182 @@ const FluidPowerLabPage = () => {
           </div>
 
           <div className="fluid-simulation-panel glass">
-            <div className="section-subtitle">Pannello simulazione</div>
-            <div className="fluid-simulation-grid">
-              <div className="fluid-simulation-card">
-                <span className="stat-card-label">Stato</span>
-                <strong className="stat-card-value">
-                  {workspace.snapshot.isRunning ? 'Attivo' : 'In attesa'}
-                </strong>
-              </div>
-              <div className="fluid-simulation-card">
-                <span className="stat-card-label">Azione</span>
-                <strong className="stat-card-value">
-                  {workspace.snapshot.actuatorAction ?? 'Nessuna'}
-                </strong>
-              </div>
-              <div className="fluid-simulation-card">
-                <span className="stat-card-label">Dominio</span>
-                <strong className="stat-card-value">{domainMeta.label}</strong>
-              </div>
+            <div className="section-subtitle">
+              {isStudentMode ? 'Pannello studente' : 'Pannello tecnico'}
             </div>
 
-            {workspace.snapshot.warnings.length > 0 && (
-              <div className="fluid-warning-list">
-                {workspace.snapshot.warnings.map((warning, index) => (
-                  <div key={`${warning}-${index}`} className="error-banner">
-                    <p>{warning}</p>
+            {isStudentMode ? (
+              <>
+                <div className={`fluid-mode-banner fluid-mode-banner-${didacticFeedback.tone}`}>
+                  <div className="fluid-mode-banner-topline">
+                    <span className="fluid-mode-badge">Esito circuito</span>
+                    <strong>{didacticFeedback.verdict}</strong>
                   </div>
-                ))}
-              </div>
-            )}
-
-            <div className="fluid-summary">
-              <p className="section-note">
-                Catena minima richiesta: sorgente {'->'} distributore {'->'} utilizzatore {'->'} ritorno/scarico.
-              </p>
-              {workspace.snapshot.summary && (
-                <div className="fluid-summary-row">
-                  <span>{workspace.snapshot.summary.sourceLabel}</span>
-                  <span>{workspace.snapshot.summary.valveLabel}</span>
-                  <span>{workspace.snapshot.summary.actuatorLabel}</span>
+                  <p>{didacticFeedback.summary}</p>
+                  <div className="fluid-mode-banner-foot">
+                    <span>{didacticFeedback.nextSuggestion}</span>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                <div className="fluid-simulation-grid">
+                  <div className="fluid-simulation-card">
+                    <span className="stat-card-label">Stato</span>
+                    <strong className="stat-card-value">
+                      {workspace.snapshot.isRunning ? 'Attivo' : 'In attesa'}
+                    </strong>
+                  </div>
+                  <div className="fluid-simulation-card">
+                    <span className="stat-card-label">Azione</span>
+                    <strong className="stat-card-value">
+                      {workspace.snapshot.actuatorAction ?? 'Nessuna'}
+                    </strong>
+                  </div>
+                  <div className="fluid-simulation-card">
+                    <span className="stat-card-label">Dominio</span>
+                    <strong className="stat-card-value">{domainMeta.label}</strong>
+                  </div>
+                </div>
+
+                <div className="fluid-checklist-panel">
+                  <div className="section-subtitle">Checklist didattica</div>
+                  <div className="fluid-checklist-list">
+                    {didacticChecklist.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`fluid-checklist-item ${item.done ? 'fluid-checklist-item-done' : ''}`}
+                      >
+                        <strong>{item.done ? 'OK' : 'Da completare'}</strong>
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {workspace.snapshot.warnings.length > 0 && (
+                  <div className="fluid-warning-list">
+                    {workspace.snapshot.warnings.map((warning, index) => (
+                      <div key={`${warning}-${index}`} className="error-banner">
+                        <p>{warning}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="fluid-summary">
+                  <p className="section-note">
+                    Catena minima richiesta: sorgente {'->'} distributore {'->'} utilizzatore {'->'} ritorno/scarico.
+                  </p>
+                  <p className="fluid-flow-explanation">{didacticFeedback.flowExplanation}</p>
+                  {workspace.snapshot.summary && (
+                    <div className="fluid-summary-row">
+                      <span>{workspace.snapshot.summary.sourceLabel}</span>
+                      <span>{workspace.snapshot.summary.valveLabel}</span>
+                      <span>{workspace.snapshot.summary.actuatorLabel}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="fluid-simulation-grid">
+                  <div className="fluid-simulation-card">
+                    <span className="stat-card-label">Modalita</span>
+                    <strong className="stat-card-value">Ingegnere</strong>
+                  </div>
+                  <div className="fluid-simulation-card">
+                    <span className="stat-card-label">Stato</span>
+                    <strong className="stat-card-value">
+                      {workspace.snapshot.isRunning ? 'Attivo' : 'In attesa'}
+                    </strong>
+                  </div>
+                  <div className="fluid-simulation-card">
+                    <span className="stat-card-label">Azione</span>
+                    <strong className="stat-card-value">
+                      {workspace.snapshot.actuatorAction ?? 'Nessuna'}
+                    </strong>
+                  </div>
+                </div>
+
+                {workspace.snapshot.warnings.length > 0 && (
+                  <div className="fluid-warning-list">
+                    {workspace.snapshot.warnings.map((warning, index) => (
+                      <div key={`${warning}-${index}`} className="error-banner">
+                        <p>{warning}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="fluid-inspector-panel">
+                  <div className="section-subtitle">Inspector tecnico</div>
+                  <div className="fluid-inspector-card">
+                    <h3 className="card-title">{inspector.title}</h3>
+                    <p className="card-description">{inspector.subtitle}</p>
+                    <div className="fluid-inspector-rows">
+                      {inspector.rows.map(([label, value]) => (
+                        <div key={label} className="fluid-inspector-row">
+                          <span>{label}</span>
+                          <strong>{value}</strong>
+                        </div>
+                      ))}
+                    </div>
+                    {inspector.ports.length > 0 && (
+                      <div className="fluid-inspector-ports">
+                        <span className="stat-card-label">Porte</span>
+                        <div className="fluid-chip-row">
+                          {inspector.ports.map((port) => (
+                            <span key={port} className="fluid-status-chip">{port}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="fluid-inspector-panel">
+                  <div className="section-subtitle">Distinta rapida</div>
+                  <div className="fluid-bom-list">
+                    {bomItems.length === 0 ? (
+                      <p className="section-note">Nessun componente presente nel workspace corrente.</p>
+                    ) : (
+                      bomItems.map((item) => (
+                        <div key={item.componentId} className="fluid-bom-item">
+                          <strong>{item.label}</strong>
+                          <span>{`${item.quantity} x ${item.category}`}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       <div className="fluid-guide-grid">
         <section className="fluid-guide-panel glass">
-          <div className="section-subtitle">Componenti da riconoscere</div>
+          <div className="section-subtitle">
+            {isStudentMode ? 'Come usarlo per studiare' : 'Uso tecnico rapido'}
+          </div>
           <ul className="fluid-guide-list">
-            <li>Pompa o compressore come sorgente di energia del fluido.</li>
-            <li>Serbatoio o scarico come riferimento del ritorno.</li>
-            <li>Distributori 3/2, 4/2 e 5/2 come organi di comando della direzione.</li>
-            <li>Valvole di massima, regolatori e FRL come organi di protezione e condizionamento.</li>
-            <li>Cilindri e motori come utilizzatori finali del circuito.</li>
+            {(isStudentMode ? studentWorkflow : engineeringWorkflow).map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
         </section>
 
         <section className="fluid-guide-panel glass">
-          <div className="section-subtitle">Circuiti guida da provare</div>
+          <div className="section-subtitle">
+            {isStudentMode ? 'Circuiti guida da provare' : 'Controlli rapidi sul circuito'}
+          </div>
           <ul className="fluid-guide-list">
-            {guidedCircuits.map((item) => (
+            {(isStudentMode ? guidedCircuits : [
+              'Verifica il tipo di porta prima di creare collegamenti fluidici o meccanici.',
+              'Controlla la posizione del distributore quando il percorso non raggiunge l utilizzatore.',
+              'Usa import/export JSON per salvare una configurazione di lavoro o confronto.',
+              'Seleziona un collegamento o un componente per leggere i dettagli dell elemento attivo.',
+            ]).map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>

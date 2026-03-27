@@ -1,7 +1,8 @@
 import React from 'react';
-import { BookOpen, Flame, Snowflake, Wind } from 'lucide-react';
+import { BookOpen, Clock3, Flame, Snowflake, Wind } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
+  getCycleById,
   simulatorLinks,
   thermodynamicFamilies,
   thermodynamicStudyPath,
@@ -14,6 +15,11 @@ const iconByFamily = {
   combined: Flame,
 };
 
+const getParentSimulatorLabel = (parentSimulator) => {
+  const parent = getCycleById(parentSimulator);
+  return parent?.simulatorTitle ?? parent?.title ?? parentSimulator;
+};
+
 const ThermodynamicCyclesPage = () => {
   return (
     <section className="features-section cycle-page">
@@ -23,7 +29,7 @@ const ThermodynamicCyclesPage = () => {
           Tutti i principali <span className="accent">cicli termodinamici</span>
         </h2>
         <p className="hero-description section-description">
-          Una biblioteca ordinata per ripasso, teoria, schemi e collegamento rapido ai simulatori gia presenti nel sito.
+          Una biblioteca ordinata per ripasso, teoria, confronto rapido tra famiglie e accesso diretto ai simulatori live.
         </p>
       </div>
 
@@ -78,27 +84,40 @@ const ThermodynamicCyclesPage = () => {
               </div>
 
               <div className="library-cycle-grid">
-                {family.cycles.map((cycle) => (
-                  <article key={cycle.id} className="library-cycle">
-                    <div className="library-cycle-top">
-                      <h4>{cycle.title}</h4>
-                      {cycle.route && (
-                        <Link to={cycle.route} className="library-link no-underline">
-                          Apri simulatore
-                        </Link>
+                {family.cycles.map((cycle) => {
+                  const live = cycle.availability === 'live';
+                  return (
+                    <article key={cycle.id} className={`library-cycle ${live ? '' : 'library-cycle-planned'}`.trim()}>
+                      <div className="library-cycle-top">
+                        <h4>{cycle.title}</h4>
+                        {live ? (
+                          <Link to={cycle.route} className="library-link no-underline">
+                            Apri simulatore
+                          </Link>
+                        ) : (
+                          <span className="library-pill">
+                            <Clock3 size={14} />
+                            In arrivo
+                          </span>
+                        )}
+                      </div>
+                      <p>{cycle.focus}</p>
+                      <div className="library-meta">
+                        <span>Uso tipico</span>
+                        <strong>{cycle.useCase}</strong>
+                      </div>
+                      <div className="library-formula">
+                        <span>Formula guida</span>
+                        <code>{cycle.formula}</code>
+                      </div>
+                      {cycle.parentSimulator && live && (
+                        <div className="library-note">
+                          Variante disponibile nel simulatore {getParentSimulatorLabel(cycle.parentSimulator)}.
+                        </div>
                       )}
-                    </div>
-                    <p>{cycle.focus}</p>
-                    <div className="library-meta">
-                      <span>Uso tipico</span>
-                      <strong>{cycle.useCase}</strong>
-                    </div>
-                    <div className="library-formula">
-                      <span>Formula guida</span>
-                      <code>{cycle.formula}</code>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             </section>
           );

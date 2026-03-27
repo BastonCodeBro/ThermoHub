@@ -381,6 +381,72 @@ export function calcBraytonCycle({
   };
 }
 
+export function calcRegenerativeBraytonCycle({
+  p1Bar,
+  t1C,
+  p2Bar,
+  t3C,
+  etaComp = 1,
+  etaTurb = 1,
+  epsilonReg = 0.75,
+  cp = AIR.cp,
+  k = AIR.k,
+  massFlow = 1,
+}) {
+  const baseCycle = calcBraytonCycle({
+    p1Bar,
+    t1C,
+    p2Bar,
+    t3C,
+    etaComp,
+    etaTurb,
+    cp,
+    k,
+    massFlow,
+  });
+
+  const [p1, p2, p3, p4] = baseCycle.realPoints;
+  const [i1, i2, i3, i4] = baseCycle.idealPoints;
+  const effectiveEpsilon = Math.max(0, Math.min(1, epsilonReg));
+  const usableRealLift = Math.max(0, p4.t - p2.t);
+  const usableIdealLift = Math.max(0, i4.t - i2.t);
+  const t5r = p2.t + effectiveEpsilon * usableRealLift;
+  const t6r = p4.t - effectiveEpsilon * usableRealLift;
+  const t5i = i2.t + effectiveEpsilon * usableIdealLift;
+  const t6i = i4.t - effectiveEpsilon * usableIdealLift;
+
+  const R = (cp * (k - 1)) / k;
+  const refReal = { hRef: p2.h, sRef: p2.s, tRefC: p2.t, pRefBar: p2.p };
+  const refIdeal = { hRef: i2.h, sRef: i2.s, tRefC: i2.t, pRefBar: i2.p };
+
+  const p5 = createIdealGasPoint('5', t5r, p2.p, { cp, k, R, ...refReal });
+  const p6 = createIdealGasPoint('6', t6r, p1.p, { cp, k, R, hRef: p4.h, sRef: p4.s, tRefC: p4.t, pRefBar: p4.p });
+  const i5 = createIdealGasPoint('5s', t5i, i2.p, { cp, k, R, ...refIdeal });
+  const i6 = createIdealGasPoint('6s', t6i, i1.p, { cp, k, R, hRef: i4.h, sRef: i4.s, tRefC: i4.t, pRefBar: i4.p });
+
+  const wc = baseCycle.stats.wc;
+  const wt = baseCycle.stats.wt;
+  const qIn = cp * (toK(t3C) - toK(t5r));
+  const qOut = cp * Math.max(0, toK(t6r) - toK(t1C));
+  const wNet = wt - wc;
+
+  return {
+    realPoints: [p1, p2, p5, p3, p4, p6],
+    idealPoints: [i1, i2, i5, i3, i4, i6],
+    stats: {
+      wc,
+      wt,
+      q_in: qIn,
+      q_out: qOut,
+      regen_gain: cp * (toK(t5r) - toK(p2.t)),
+      epsilon_reg: effectiveEpsilon * 100,
+      eta: qIn > 0 ? (100 * wNet) / qIn : 0,
+      bwr: wt > 0 ? (100 * wc) / wt : 0,
+      power: wNet * massFlow,
+    },
+  };
+}
+
 export function calcCarnotCycle({
   tHighC,
   tLowC,
@@ -440,6 +506,133 @@ export function calcCarnotCycle({
       eta: (1 - tlK / thK) * 100,
       power: wNet * massFlow,
       ds,
+    },
+  };
+}
+
+export function calcReverseCarnotCycle({
+  tHighC,
+  tLowC,
+  pRefBar = 1,
+  ds = 0.5,
+  massFlow = 1,
+}) {
+  const thK = toK(tHighC);
+  const tlK = toK(tLowC);
+  const s1 = 1;
+  const s2 = s1 + ds;
+
+  const p1 = createIdealGasPoint('1', tLowC, pRefBar, { cp: AIR.cp, k: AIR.k, R: AIR.R });
+  const p2 = createIdealGasPoint('2', tLowC, pRefBar * Math.exp(-(s2 - s1) / AIR.R), {
+    cp: AIR.cp,
+    k: AIR.k,
+    R: AIR.R,
+    hRef: p1.h,
+    sRef: s1,
+    tRefC: tLowC,
+    pRefBar,
+  });
+  const p3Bar = p2.p * (thK / tlK) ** (AIR.k / (AIR.k - 1));
+  const p3 = createIdealGasPoint('3', tHighC, p3Bar, {
+    cp: AIR.cp,
+    k: AIR.k,
+    R: AIR.R,
+    hRef: p2.h,
+    sRef: p2.s,
+    tRefC: tLowC,
+    pRefBar: p2.p,
+  });
+  const p4 = createIdealGasPoint('4', tHighC, p3Bar * Math.exp((s2 - s1) / AIR.R), {
+    cp: AIR.cp,
+    k: AIR.k,
+    R: AIR.R,
+    hRef: p3.h,
+    sRef: s2,
+    tRefC: tHighC,
+    pRefBar: p3.p,
+  });
+
+  const qLow = tlK * ds;
+  const qHigh = thK * ds;
+  const win = qHigh - qLow;
+
+  return {
+    points: [p1, p2, p3, p4],
+    stats: {
+      Q_low: qLow,
+      Q_high: qHigh,
+      W_in: win,
+      cop: win > 0 ? qLow / win : 0,
+      cop_hp: win > 0 ? qHigh / win : 0,
+      power: win * massFlow,
+      ds,
+    },
+  };
+}
+
+export function calcDualCycle({
+  p1Bar,
+  t1C,
+  r,
+  alpha,
+  rc,
+  eta = 0.85,
+  k = AIR.k,
+  cv = AIR.cv,
+  massFlow = 1,
+}) {
+  const R = cv * (k - 1);
+  const cp = cv * k;
+  const t1K = toK(t1C);
+
+  const v1 = (R * t1K) / (p1Bar * 100);
+  const v2 = v1 / r;
+
+  const t2sK = t1K * r ** (k - 1);
+  const t2K = t1K + (t2sK - t1K) / eta;
+  const p2 = p1Bar * (t2K / t1K) * (v1 / v2);
+
+  const p3 = p2 * alpha;
+  const t3K = t2K * alpha;
+
+  const v3 = v2;
+  const v4 = v3 * rc;
+  const p4 = p3;
+  const t4K = t3K * rc;
+
+  const t5sK = t4K * (v4 / v1) ** (k - 1);
+  const t5K = t4K - eta * (t4K - t5sK);
+  const p5 = p4 * (t5K / t4K) * (v4 / v1);
+
+  const ref = { tRefC: t1C, pRefBar: p1Bar };
+  const p1 = createIdealGasPoint('1', t1C, p1Bar, { cp, k, R });
+  const p2r = createIdealGasPoint('2', toC(t2K), p2, { cp, k, R, hRef: p1.h, sRef: p1.s, ...ref });
+  const p3r = createIdealGasPoint('3', toC(t3K), p3, { cp, k, R, hRef: p1.h, sRef: p1.s, ...ref });
+  const p4r = createIdealGasPoint('4', toC(t4K), p4, { cp, k, R, hRef: p1.h, sRef: p1.s, ...ref });
+  const p5r = createIdealGasPoint('5', toC(t5K), p5, { cp, k, R, hRef: p1.h, sRef: p1.s, ...ref });
+
+  const qInIsochoric = cv * (t3K - t2K);
+  const qInIsobaric = cp * (t4K - t3K);
+  const qIn = qInIsochoric + qInIsobaric;
+  const qOut = cv * (t5K - t1K);
+  const wNet = qIn - qOut;
+
+  const ideal = eta === 1
+    ? { points: [p1, p2r, p3r, p4r, p5r] }
+    : calcDualCycle({ p1Bar, t1C, r, alpha, rc, eta: 1, k, cv, massFlow });
+
+  return {
+    points: [p1, p2r, p3r, p4r, p5r],
+    idealPoints: ideal.points,
+    stats: {
+      wc: cv * (t2K - t1K),
+      wt: cv * (t4K - t5K),
+      q_in: qIn,
+      q_in_cv: qInIsochoric,
+      q_in_cp: qInIsobaric,
+      q_out: qOut,
+      eta: qIn > 0 ? (100 * wNet) / qIn : 0,
+      power: wNet * massFlow,
     },
   };
 }

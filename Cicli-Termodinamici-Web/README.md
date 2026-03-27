@@ -7,7 +7,7 @@ Stato aggiornato al **2026-03-26**.
 ## Obiettivo
 
 - offrire un ambiente unico per lezione, esercitazione e ripasso
-- mantenere tutto client-side nel deploy Vercel
+- mantenere tutto client-side nel deploy Cloudflare Pages
 - includere PDF scaricabili brandizzati ThermoHub
 
 ## Route disponibili
@@ -65,6 +65,28 @@ npm run dev
 - il file WASM richiesto e `public/coolprop.wasm`
 - le tracce originali degli esami sono in `public/esami/originali/`
 - il deploy del repository usa la build prodotta da questa cartella
+
+## Deploy Cloudflare Pages
+
+Deploy consigliato: **Cloudflare Pages** con sito statico, senza backend.
+
+Impostazioni da usare:
+
+- `Framework preset`: `Vite`
+- `Build command`: `npm run build`
+- `Build output directory`: `dist`
+- `Root directory`: `Cicli-Termodinamici-Web`
+
+Note operative:
+
+- il file [`public/_redirects`](/C:/Users/andre/Desktop/ThermoHub/Cicli-Termodinamici-Web/public/_redirects) abilita il fallback SPA per React Router
+- il file [`public/_headers`](/C:/Users/andre/Desktop/ThermoHub/Cicli-Termodinamici-Web/public/_headers) aggiunge header base per la versione statica e cache lunga sugli asset compilati
+- se colleghi il repository dalla root `ThermoHub`, su Cloudflare devi indicare come root la cartella `Cicli-Termodinamici-Web`
+- dopo il deploy, prova queste route direttamente dal browser:
+  - `/`
+  - `/impianti-fluidici`
+  - `/laboratorio-vapore`
+  - `/esami-di-stato`
 
 ## Documenti correlati
 

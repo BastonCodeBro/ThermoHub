@@ -1,306 +1,272 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { RotateCw } from 'lucide-react';
-import CyclePageLayout from './shared/CyclePageLayout';
+import { useSearchParams } from 'react-router-dom';
 import InputField from './shared/InputField';
-import StatCard from './shared/StatCard';
-import FormulasSection from './shared/FormulasSection';
-import SchematicDiagram from './shared/SchematicDiagram';
-import { plotLayout, plotConfig, addTrace, clampLogRange, pointAnnotations } from './shared/plotConfig';
-import { renderPlot, cleanupPlot } from '../utils/plotly';
-import { calcCarnotCycle } from '../utils/idealGas';
-import { generateProcessPath } from '../utils/processPath';
+import IdealGasCyclePage from './shared/IdealGasCyclePage';
+import { calcCarnotCycle, calcReverseCarnotCycle } from '../utils/idealGas';
+import { pointAnnotations } from './shared/plotConfig';
 
 const COLOR = '#A78BFA';
-const SEGMENT_COLORS = [COLOR, '#EF4444', '#22D3EE', '#60A5FA'];
-const isFiniteNumber = (value) => Number.isFinite(value);
+const MODES = {
+  engine: {
+    label: 'Motore',
+    title: 'Carnot',
+    schematicType: 'carnot',
+  },
+  reverse: {
+    label: 'Carnot inverso',
+    title: 'Carnot Inverso',
+    schematicType: 'reverse-carnot',
+  },
+};
+
+const plotDefinitions = [
+  {
+    id: 'ts',
+    label: 'T-s',
+    xKey: 's',
+    yKey: 't',
+    xLabel: 'Entropia s (kJ/(kg K))',
+    yLabel: 'Temperatura T (degC)',
+    getAnnotations: ({ points, accentColor }) =>
+      pointAnnotations(points.map((point) => ({ x: point.s, y: point.t })), ['1', '2', '3', '4'], accentColor),
+  },
+  {
+    id: 'pv',
+    label: 'P-v',
+    xKey: 'v',
+    yKey: 'p',
+    xLabel: 'Volume specifico v (m^3/kg)',
+    yLabel: 'Pressione P (bar)',
+    logX: true,
+    logY: true,
+  },
+  {
+    id: 'hs',
+    label: 'h-s',
+    xKey: 's',
+    yKey: 'h',
+    xLabel: 'Entropia s (kJ/(kg K))',
+    yLabel: 'Entalpia h (kJ/kg)',
+  },
+];
+
+const presets = {
+  engine: [
+    { label: 'Base', values: { t_high: 500, t_low: 25, p_ref: 1, ds: 0.5, mass_flow: 1 } },
+    { label: 'Caso esame', values: { t_high: 650, t_low: 35, p_ref: 1, ds: 0.45, mass_flow: 1.2 } },
+    { label: 'Caso inefficiente', values: { t_high: 420, t_low: 55, p_ref: 1, ds: 0.55, mass_flow: 1 } },
+  ],
+  reverse: [
+    { label: 'Base', values: { t_high: 35, t_low: -5, p_ref: 2, ds: 0.45, mass_flow: 1 } },
+    { label: 'Caso esame', values: { t_high: 45, t_low: -10, p_ref: 2.2, ds: 0.5, mass_flow: 1 } },
+    { label: 'Caso inefficiente', values: { t_high: 55, t_low: 5, p_ref: 2, ds: 0.4, mass_flow: 1 } },
+  ],
+};
 
 const CarnotPage = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [results, setResults] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
-  const [downloadingPDF, setDownloadingPDF] = useState(false);
-
-  const tsRef = useRef(null);
-  const pvRef = useRef(null);
-  const hsRef = useRef(null);
-  const schematicRef = useRef(null);
-
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mode = MODES[searchParams.get('mode')] ? searchParams.get('mode') : 'engine';
   const [inputs, setInputs] = useState({
     t_high: 500,
     t_low: 25,
     p_ref: 1.0,
+    ds: 0.5,
     mass_flow: 1.0,
   });
 
-  useEffect(() => {
-    if (!results) return;
+  const modeOptions = useMemo(
+    () => Object.entries(MODES).map(([key, config]) => ({
+      label: config.label,
+      active: key === mode,
+      onClick: () => {
+        const next = new URLSearchParams(searchParams);
+        next.set('mode', key);
+        setSearchParams(next);
+      },
+    })),
+    [mode, searchParams, setSearchParams],
+  );
 
-    const renderAllPlots = async () => {
-      const pts = results.allPoints;
-      const pathOptions = [
-        { processType: 'isothermal', model: 'ideal-gas' },
-        { processType: 'isentropic', model: 'ideal-gas' },
-        { processType: 'isothermal', model: 'ideal-gas' },
-        { processType: 'isentropic', model: 'ideal-gas' },
-      ];
-
-      const paths = await Promise.all([
-        generateProcessPath(pts[0], pts[1], 'Air', 64, pathOptions[0]),
-        generateProcessPath(pts[1], pts[2], 'Air', 64, pathOptions[1]),
-        generateProcessPath(pts[2], pts[3], 'Air', 64, pathOptions[2]),
-        generateProcessPath(pts[3], pts[0], 'Air', 64, pathOptions[3]),
-      ]);
-
-      if (tsRef.current) {
-        const data = [
-          ...paths.map((path, index) =>
-            addTrace(path.map((p) => p.s), path.map((p) => p.t), {
-              name: `Tratto ${index + 1}`,
-              color: SEGMENT_COLORS[index],
-              width: 3,
-              mode: 'lines',
-            }),
-          ),
-          addTrace(pts.map((p) => p.s), pts.map((p) => p.t), {
-            color: COLOR,
-            mode: 'markers',
-            markerSize: 10,
-          }),
-        ];
-        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Temperatura T (°C)');
-        layout.annotations = pointAnnotations(
-          pts.map((p) => ({ x: p.s, y: p.t })),
-          ['1\nIsoterma TH', '2\nAdiabatica', '3\nIsoterma TL', '4\nAdiabatica'],
-          COLOR,
-        );
-        renderPlot(tsRef.current, data, layout, plotConfig);
-      }
-
-      if (pvRef.current) {
-        const pvData = [
-          ...paths.map((path, index) =>
-            addTrace(path.map((p) => p.v), path.map((p) => p.p), {
-              name: `Tratto ${index + 1}`,
-              color: SEGMENT_COLORS[index],
-              width: 3,
-              mode: 'lines',
-            }),
-          ),
-          addTrace(pts.map((p) => p.v), pts.map((p) => p.p), {
-            color: COLOR,
-            mode: 'markers',
-            markerSize: 10,
-          }),
-        ];
-        const allV = pvData.flatMap((t) => t.x);
-        const allP = pvData.flatMap((t) => t.y);
-        const layout = plotLayout('Volume specifico v (m\u00B3/kg)', 'Pressione P (bar)', {
-          xaxis: { type: 'log', range: clampLogRange(allV, { minMag: -3, maxMag: 2 }) },
-          yaxis: { type: 'log', range: clampLogRange(allP, { minMag: -1, maxMag: 3 }) },
-        });
-        layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(pvRef.current, pvData, layout, plotConfig);
-      }
-
-      if (hsRef.current) {
-        const data = [
-          ...paths.map((path, index) =>
-            addTrace(path.map((p) => p.s), path.map((p) => p.h), {
-              name: `Tratto ${index + 1}`,
-              color: SEGMENT_COLORS[index],
-              width: 3,
-              mode: 'lines',
-            }),
-          ),
-          addTrace(pts.map((p) => p.s), pts.map((p) => p.h), {
-            color: COLOR,
-            mode: 'markers',
-            markerSize: 10,
-          }),
-        ];
-        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
-        layout.annotations = pointAnnotations(pts.map((p) => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(hsRef.current, data, layout, plotConfig);
-      }
-    };
-
-    renderAllPlots();
-    return () => {
-      cleanupPlot(tsRef.current);
-      cleanupPlot(pvRef.current);
-      cleanupPlot(hsRef.current);
-    };
-  }, [results]);
-
-  const canCalculate = isFiniteNumber(inputs.t_high)
-    && isFiniteNumber(inputs.t_low)
-    && isFiniteNumber(inputs.p_ref)
-    && isFiniteNumber(inputs.mass_flow)
+  const canCalculate = Number.isFinite(inputs.t_high)
+    && Number.isFinite(inputs.t_low)
+    && Number.isFinite(inputs.p_ref)
+    && Number.isFinite(inputs.mass_flow)
+    && Number.isFinite(inputs.ds)
     && inputs.t_high > inputs.t_low
     && inputs.p_ref > 0
-    && inputs.mass_flow > 0;
-
-  const calculate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const cycle = calcCarnotCycle({
-        tHighC: inputs.t_high,
-        tLowC: inputs.t_low,
-        pRefBar: inputs.p_ref,
-        massFlow: inputs.mass_flow,
-      });
-
-      setResults({
-        allPoints: cycle.points,
-        stats: cycle.stats,
-      });
-    } catch (calculationError) {
-      setError('Parametri non validi: la temperatura alta deve essere maggiore di quella bassa.');
-      console.error(calculationError);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownloadPDF = useCallback(async () => {
-    if (!results) return;
-    setDownloadingPDF(true);
-    try {
-      const { exportToPDF } = await import('../utils/pdfExport');
-      await exportToPDF({
-        title: 'Carnot',
-        accentColor: COLOR,
-        inputs,
-        stats: results.stats,
-        points: results.allPoints.map((p, index) => ({
-          label: ['1: TH', '2: Adiab.', '3: TL', '4: Adiab.'][index],
-          t: p.t,
-          p: p.p,
-          h: p.h,
-          s: p.s,
-          v: p.v,
-        })),
-        formulas: [
-          {
-            label: 'Calore assorbito',
-            latex: 'Q_{in} = T_H \\cdot \\Delta s',
-            value: results.stats.Q_in,
-            numeric: `${(inputs.t_high + 273.15).toFixed(2)} \u00B7 ${results.stats.ds.toFixed(4)} = ${results.stats.Q_in.toFixed(2)} kJ/kg`,
-          },
-          {
-            label: 'Calore ceduto',
-            latex: 'Q_{out} = T_L \\cdot \\Delta s',
-            value: results.stats.Q_out,
-            numeric: `${(inputs.t_low + 273.15).toFixed(2)} \u00B7 ${results.stats.ds.toFixed(4)} = ${results.stats.Q_out.toFixed(2)} kJ/kg`,
-          },
-          {
-            label: 'Lavoro netto',
-            latex: 'W_{net} = Q_{in} - Q_{out}',
-            value: results.stats.W_net,
-            numeric: `${results.stats.Q_in.toFixed(2)} - ${results.stats.Q_out.toFixed(2)} = ${results.stats.W_net.toFixed(2)} kJ/kg`,
-          },
-          {
-            label: 'Rendimento Carnot',
-            latex: '\\eta = 1 - \\frac{T_L}{T_H}',
-            value: results.stats.eta,
-            numeric: `(1 - ${(inputs.t_low + 273.15).toFixed(2)} / ${(inputs.t_high + 273.15).toFixed(2)}) \u00D7 100 = ${results.stats.eta.toFixed(2)} %`,
-          },
-        ],
-        plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef },
-        schematicRef,
-      });
-    } catch (downloadError) {
-      console.error(downloadError);
-    } finally {
-      setDownloadingPDF(false);
-    }
-  }, [results, inputs]);
-
-  const schematicProps = results ? {
-    points: results.allPoints,
-    pointLabels: ['1 Isoterma TH', '2 Fine espansione', '3 Isoterma TL', '4 Fine compressione'],
-    summaryItems: [
-      { label: 'Q in', value: `${results.stats.Q_in.toFixed(1)} kJ/kg`, color: '#EF4444' },
-      { label: 'Q out', value: `${results.stats.Q_out.toFixed(1)} kJ/kg`, color: '#60A5FA' },
-      { label: 'Lavoro netto', value: `${results.stats.W_net.toFixed(1)} kJ/kg`, color: COLOR },
-      { label: 'Rendimento', value: `${results.stats.eta.toFixed(2)} %`, color: COLOR },
-    ],
-  } : null;
-
-  const diagramTabs = results ? [
-    { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0), content: <div ref={tsRef} className="plot-area" /> },
-    { id: 'pv', label: 'P-v', active: activeTab === 1, onClick: () => setActiveTab(1), content: <div ref={pvRef} className="plot-area" /> },
-    { id: 'hs', label: 'h-s', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={hsRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3), content: <div ref={schematicRef}><SchematicDiagram type="carnot" accentColor={COLOR} {...schematicProps} /></div> },
-  ] : null;
-
-  const formulasSection = results ? (
-    <FormulasSection
-      accentColor={COLOR}
-      points={results.allPoints.map((p, index) => ({
-        label: ['1: TH', '2: Adiab.', '3: TL', '4: Adiab.'][index],
-        t: p.t,
-        p: p.p,
-        h: p.h,
-        s: p.s,
-        v: p.v,
-      }))}
-      formulas={[
-        { label: '1 -> 2', latex: 'Espansione isoterma a T_H' },
-        { label: '2 -> 3', latex: 'Espansione isentropica' },
-        { label: '3 -> 4', latex: 'Compressione isoterma a T_L' },
-        { label: '4 -> 1', latex: 'Compressione isentropica' },
-        { label: 'Calore assorbito', latex: 'Q_{in} = T_H \\cdot \\Delta s', value: results.stats.Q_in },
-        { label: 'Calore ceduto', latex: 'Q_{out} = T_L \\cdot \\Delta s', value: results.stats.Q_out },
-        { label: 'Lavoro netto', latex: 'W_{net} = Q_{in} - Q_{out}', value: results.stats.W_net },
-        { label: 'Rendimento Carnot', latex: '\\eta = 1 - \\frac{T_L}{T_H}', value: results.stats.eta, display: true },
-      ]}
-    />
-  ) : null;
-
-  const stats = results ? (
-    <div className="stats-row">
-      <StatCard label="Rendimento Carnot" value={`${results.stats.eta.toFixed(2)}%`} accent color={COLOR} />
-      <StatCard label="Potenza Netta" value={`${results.stats.power.toFixed(1)} kW`} />
-      <StatCard label="Calore In" value={`${results.stats.Q_in.toFixed(1)} kJ/kg`} />
-      <StatCard label="Calore Out" value={`${results.stats.Q_out.toFixed(1)} kJ/kg`} />
-    </div>
-  ) : null;
+    && inputs.mass_flow > 0
+    && inputs.ds > 0;
 
   return (
-    <CyclePageLayout
+    <IdealGasCyclePage
       badge="Ciclo Ideale"
       title="Ciclo"
-      titleAccent="Carnot"
+      titleAccent={MODES[mode].title}
       accentColor={COLOR}
-      loading={loading}
-      error={error}
-      results={results}
-      onCalculate={calculate}
-      canCalculate={canCalculate}
-      stats={stats}
-      diagramTabs={diagramTabs}
-      formulasSection={formulasSection}
-      onDownloadPDF={handleDownloadPDF}
-      downloadingPDF={downloadingPDF}
       EmptyIcon={RotateCw}
-    >
-      <h3 className="card-title">Parametri del Ciclo</h3>
-      <p className="input-hint">
-        Ciclo di Carnot ideale su gas ideale. Il rendimento dipende solo dalle temperature assolute delle sorgenti.
-      </p>
-      <div className="inputs-grid">
-        <InputField label="Temperatura Alta" value={inputs.t_high} onChange={(value) => setInputs({ ...inputs, t_high: value })} unit="°C" accent={COLOR} />
-        <InputField label="Temperatura Bassa" value={inputs.t_low} onChange={(value) => setInputs({ ...inputs, t_low: value })} unit="°C" accent={COLOR} />
-      </div>
-      <div className="inputs-row">
-        <InputField label="Pressione di Riferimento" value={inputs.p_ref} onChange={(value) => setInputs({ ...inputs, p_ref: value })} unit="bar" accent={COLOR} />
-        <InputField label="Portata Massica" value={inputs.mass_flow} onChange={(value) => setInputs({ ...inputs, mass_flow: value })} unit="kg/s" step={0.1} accent={COLOR} />
-      </div>
-    </CyclePageLayout>
+      emptyText="Definisci le due sorgenti termiche per calcolare il limite teorico di rendimento o di COP."
+      inputs={inputs}
+      setInputs={setInputs}
+      canCalculate={canCalculate}
+      plotDefinitions={plotDefinitions}
+      getPathOptions={({ mode: activeMode }) => activeMode === 'reverse'
+        ? {
+          real: [
+            { processType: 'isothermal', model: 'ideal-gas' },
+            { processType: 'isentropic', model: 'ideal-gas' },
+            { processType: 'isothermal', model: 'ideal-gas' },
+            { processType: 'isentropic', model: 'ideal-gas' },
+          ],
+          ideal: [],
+        }
+        : {
+          real: [
+            { processType: 'isothermal', model: 'ideal-gas' },
+            { processType: 'isentropic', model: 'ideal-gas' },
+            { processType: 'isothermal', model: 'ideal-gas' },
+            { processType: 'isentropic', model: 'ideal-gas' },
+          ],
+          ideal: [],
+        }}
+      buildResult={async (values, activeMode) => {
+        const cycle = activeMode === 'reverse'
+          ? calcReverseCarnotCycle({
+            tHighC: values.t_high,
+            tLowC: values.t_low,
+            pRefBar: values.p_ref,
+            ds: values.ds,
+            massFlow: values.mass_flow,
+          })
+          : calcCarnotCycle({
+            tHighC: values.t_high,
+            tLowC: values.t_low,
+            pRefBar: values.p_ref,
+            ds: values.ds,
+            massFlow: values.mass_flow,
+          });
+
+        const summaryItems = activeMode === 'reverse'
+          ? [
+            { label: 'Q fredda', value: `${cycle.stats.Q_low.toFixed(1)} kJ/kg`, color: '#3B82F6' },
+            { label: 'Q calda', value: `${cycle.stats.Q_high.toFixed(1)} kJ/kg`, color: '#EF4444' },
+            { label: 'COP frigorifero', value: `${cycle.stats.cop.toFixed(2)}`, color: COLOR },
+            { label: 'COP pompa di calore', value: `${cycle.stats.cop_hp.toFixed(2)}`, color: COLOR },
+          ]
+          : [
+            { label: 'Q in', value: `${cycle.stats.Q_in.toFixed(1)} kJ/kg`, color: '#EF4444' },
+            { label: 'Q out', value: `${cycle.stats.Q_out.toFixed(1)} kJ/kg`, color: '#3B82F6' },
+            { label: 'Lavoro netto', value: `${cycle.stats.W_net.toFixed(1)} kJ/kg`, color: COLOR },
+            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
+          ];
+
+        const formulas = activeMode === 'reverse'
+          ? [
+            { label: 'Calore assorbito al freddo', latex: 'Q_L = T_L \\cdot \\Delta s', value: cycle.stats.Q_low },
+            { label: 'Calore ceduto al caldo', latex: 'Q_H = T_H \\cdot \\Delta s', value: cycle.stats.Q_high },
+            { label: 'Lavoro assorbito', latex: 'W_{in} = Q_H - Q_L', value: cycle.stats.W_in },
+            { label: 'COP frigorifero', latex: 'COP_R = \\frac{Q_L}{W_{in}} = \\frac{T_L}{T_H - T_L}', value: cycle.stats.cop, display: true },
+            { label: 'COP pompa di calore', latex: 'COP_{HP} = \\frac{Q_H}{W_{in}}', value: cycle.stats.cop_hp, display: true },
+          ]
+          : [
+            { label: '1 -> 2', latex: 'Espansione isoterma a T_H' },
+            { label: '2 -> 3', latex: 'Espansione isentropica' },
+            { label: '3 -> 4', latex: 'Compressione isoterma a T_L' },
+            { label: '4 -> 1', latex: 'Compressione isentropica' },
+            { label: 'Calore assorbito', latex: 'Q_{in} = T_H \\cdot \\Delta s', value: cycle.stats.Q_in },
+            { label: 'Calore ceduto', latex: 'Q_{out} = T_L \\cdot \\Delta s', value: cycle.stats.Q_out },
+            { label: 'Lavoro netto', latex: 'W_{net} = Q_{in} - Q_{out}', value: cycle.stats.W_net },
+            { label: 'Rendimento Carnot', latex: '\\eta = 1 - \\frac{T_L}{T_H}', value: cycle.stats.eta, display: true },
+          ];
+
+        return {
+          allPoints: cycle.points,
+          idealPoints: [],
+          schematicType: MODES[activeMode].schematicType,
+          pointLabels: activeMode === 'reverse'
+            ? ['1 Uscita evaporatore ideale', '2 Fine evaporazione isoterma', '3 Fine compressione isentropica', '4 Fine condensazione isoterma']
+            : ['1 Isoterma TH', '2 Fine espansione', '3 Isoterma TL', '4 Fine compressione'],
+          summaryItems,
+          statCards: activeMode === 'reverse'
+            ? [
+              { label: 'COP frigorifero', value: cycle.stats.cop.toFixed(2), accent: true, color: COLOR },
+              { label: 'COP pompa di calore', value: cycle.stats.cop_hp.toFixed(2) },
+              { label: 'Lavoro assorbito', value: `${cycle.stats.W_in.toFixed(1)} kJ/kg` },
+              { label: 'Potenza richiesta', value: `${cycle.stats.power.toFixed(1)} kW` },
+            ]
+            : [
+              { label: 'Rendimento Carnot', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
+              { label: 'Potenza netta', value: `${cycle.stats.power.toFixed(1)} kW` },
+              { label: 'Calore in', value: `${cycle.stats.Q_in.toFixed(1)} kJ/kg` },
+              { label: 'Calore out', value: `${cycle.stats.Q_out.toFixed(1)} kJ/kg` },
+            ],
+          formulas,
+          pdfTitle: MODES[activeMode].title,
+          formulaPointLabels: ['1', '2', '3', '4'],
+          pdfPointLabels: ['1', '2', '3', '4'],
+          pdfFormulas: formulas,
+          stats: cycle.stats,
+        };
+      }}
+      buildError={() => 'Servono T calda maggiore di T fredda, pressione di riferimento positiva e variazione di entropia maggiore di zero.'}
+      renderInputs={({ inputs: values, setInputs: updateInputs, accentColor, mode: activeMode }) => (
+        <>
+          <h3 className="card-title">Parametri del ciclo</h3>
+          <p className="input-hint">
+            {activeMode === 'reverse'
+              ? 'Carnot inverso ideale: utile per confrontare il COP massimo teorico di un frigorifero o di una pompa di calore.'
+              : 'Motore di Carnot ideale su gas ideale: il rendimento dipende solo dalle temperature assolute delle sorgenti.'}
+          </p>
+          <div className="inputs-grid">
+            <InputField label={activeMode === 'reverse' ? 'Temperatura calda' : 'Temperatura alta'} value={values.t_high} onChange={(value) => updateInputs((prev) => ({ ...prev, t_high: value }))} unit="degC" accent={accentColor} />
+            <InputField label={activeMode === 'reverse' ? 'Temperatura fredda' : 'Temperatura bassa'} value={values.t_low} onChange={(value) => updateInputs((prev) => ({ ...prev, t_low: value }))} unit="degC" accent={accentColor} />
+          </div>
+          <div className="inputs-row">
+            <InputField label="Pressione di riferimento" value={values.p_ref} onChange={(value) => updateInputs((prev) => ({ ...prev, p_ref: value }))} unit="bar" accent={accentColor} />
+            <InputField label="Variazione di entropia" value={values.ds} onChange={(value) => updateInputs((prev) => ({ ...prev, ds: value }))} step={0.05} min={0.1} accent={accentColor} />
+          </div>
+          <InputField label="Portata massica" value={values.mass_flow} onChange={(value) => updateInputs((prev) => ({ ...prev, mass_flow: value }))} unit="kg/s" step={0.1} accent={accentColor} />
+        </>
+      )}
+      modeOptions={modeOptions}
+      activeMode={mode}
+      presets={presets[mode]}
+      insights={{
+        takeaways: activeModeSummary(mode),
+        commonMistake: mode === 'reverse'
+          ? 'Confrontare il COP reale con il rendimento di un motore: il COP e un rapporto diverso e puo essere maggiore di 1.'
+          : 'Usare gradi Celsius nella formula del rendimento: Carnot richiede sempre temperature assolute.',
+        compareNote: mode === 'reverse'
+          ? 'Il Carnot inverso e il benchmark teorico da confrontare con il ciclo frigorifero reale a compressione di vapore.'
+          : 'Il Carnot motore fissa il tetto massimo di rendimento per ogni ciclo termico che lavora tra le stesse sorgenti.',
+      }}
+      compareLinks={[
+        { label: 'Motore Carnot', route: '/carnot?mode=engine' },
+        { label: 'Carnot inverso', route: '/carnot?mode=reverse' },
+        { label: 'Frigorifero', route: '/frigo' },
+      ]}
+      legendItems={[
+        { label: 'Calore dalla sorgente calda', color: '#EF4444' },
+        { label: 'Calore verso sorgente fredda', color: '#3B82F6' },
+        { label: 'Lavoro', color: COLOR },
+      ]}
+    />
   );
 };
 
+const activeModeSummary = (mode) => (
+  mode === 'reverse'
+    ? [
+      'Ridurre il salto termico tra sorgente calda e fredda aumenta subito il COP teorico.',
+      'Il Carnot inverso fornisce un riferimento massimo: nessun frigorifero reale puo superarlo.',
+      'Confronta COP_R e COP_HP per capire se stai guardando il lato freddo o il lato caldo dell impianto.',
+    ]
+    : [
+      'Il rendimento cresce se T_H aumenta o se T_L diminuisce.',
+      'I tratti isentropici chiudono il ciclo senza scambio termico.',
+      'Carnot e il riferimento teorico da usare per leggere quanto un ciclo reale e lontano dal limite.',
+    ]
+);
+
 export default CarnotPage;
+

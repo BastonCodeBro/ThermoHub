@@ -15,6 +15,8 @@ vi.mock('./utils/waterProps', () => ({
   getSaturationDomeFull: vi.fn().mockResolvedValue({
     ts: { s: [1, 2], t: [100, 200] },
     hs: { s: [1, 2], h: [500, 2600] },
+    pv: { v: [0.001, 1], p: [0.1, 100] },
+    ph: { h: [500, 2600], p: [0.1, 100] },
   }),
 }));
 
@@ -79,6 +81,46 @@ describe('App routes', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Tutti i principali cicli termodinamici/i })).toBeInTheDocument();
       expect(screen.getByText(/Ciclo Joule-Brayton/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/In arrivo/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  test('renders dual cycle route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/duale']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Ciclo Duale o Sabathe/i })).toBeInTheDocument();
+      expect(screen.getByText(/Parametri motore/i)).toBeInTheDocument();
+    });
+  });
+
+  test('renders combined cycle route', async () => {
+    render(
+      <MemoryRouter initialEntries={['/ciclo-combinato']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Ciclo Combinato Gas-Vapore/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Blocco gas/i, level: 3 })).toBeInTheDocument();
+    });
+  });
+
+  test('renders query-driven cycle modes', async () => {
+    render(
+      <MemoryRouter initialEntries={['/rankine?variant=reheat']}>
+        <App />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Ciclo Rankine con Risurriscaldamento/i })).toBeInTheDocument();
+      expect(screen.getByText(/Nel reheat il vapore espande in due stadi/i)).toBeInTheDocument();
     });
   });
 

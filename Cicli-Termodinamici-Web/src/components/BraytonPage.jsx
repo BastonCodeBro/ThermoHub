@@ -1,32 +1,72 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Wind } from 'lucide-react';
-import CyclePageLayout from './shared/CyclePageLayout';
+import { useSearchParams } from 'react-router-dom';
 import InputField from './shared/InputField';
-import StatCard from './shared/StatCard';
-import FormulasSection from './shared/FormulasSection';
-import SchematicDiagram from './shared/SchematicDiagram';
-import { plotLayout, plotConfig, addTrace, clampLogRange, pointAnnotations } from './shared/plotConfig';
-import { renderPlot, cleanupPlot } from '../utils/plotly';
-import { calcBraytonCycle } from '../utils/idealGas';
-import { generateProcessPath } from '../utils/processPath';
+import IdealGasCyclePage from './shared/IdealGasCyclePage';
+import { calcBraytonCycle, calcRegenerativeBraytonCycle } from '../utils/idealGas';
+import { pointAnnotations } from './shared/plotConfig';
 
 const COLOR = '#818CF8';
-const SEGMENT_COLORS = [COLOR, '#F97316', '#22D3EE', '#60A5FA'];
-const IDEAL_COLOR = '#475569';
-const isFiniteNumber = (value) => Number.isFinite(value);
+const MODES = {
+  simple: {
+    label: 'Brayton semplice',
+    schematicType: 'brayton',
+    compareNote: 'La variante rigenerativa non cambia il lavoro netto ma riduce il calore richiesto nel combustore.',
+  },
+  regenerative: {
+    label: 'Brayton rigenerativo',
+    schematicType: 'regenerative-brayton',
+    compareNote: 'La rigenerazione e utile solo quando i gas in uscita turbina sono ancora piu caldi dell aria compressa.',
+  },
+};
+
+const plotDefinitions = [
+  {
+    id: 'ts',
+    label: 'T-s',
+    xKey: 's',
+    yKey: 't',
+    xLabel: 'Entropia s (kJ/(kg K))',
+    yLabel: 'Temperatura T (degC)',
+    getAnnotations: ({ points, accentColor }) =>
+      pointAnnotations(points.map((point) => ({ x: point.s, y: point.t })), points.map((point) => point.name ?? ''), accentColor),
+  },
+  {
+    id: 'pv',
+    label: 'P-v',
+    xKey: 'v',
+    yKey: 'p',
+    xLabel: 'Volume specifico v (m^3/kg)',
+    yLabel: 'Pressione P (bar)',
+    logX: true,
+    logY: true,
+  },
+  {
+    id: 'hs',
+    label: 'h-s',
+    xKey: 's',
+    yKey: 'h',
+    xLabel: 'Entropia s (kJ/(kg K))',
+    yLabel: 'Entalpia h (kJ/kg)',
+  },
+];
+
+const presetMap = {
+  simple: [
+    { label: 'Base', values: { p_low: 1, beta: 10, t_min: 20, t_max: 1000, eta_c: 0.85, eta_t: 0.88, mass_flow: 1 } },
+    { label: 'Caso esame', values: { p_low: 1, beta: 12, t_min: 15, t_max: 1100, eta_c: 0.87, eta_t: 0.9, mass_flow: 1.4 } },
+    { label: 'Caso inefficiente', values: { p_low: 1, beta: 7, t_min: 35, t_max: 900, eta_c: 0.74, eta_t: 0.8, mass_flow: 1 } },
+  ],
+  regenerative: [
+    { label: 'Base', values: { p_low: 1, beta: 8, t_min: 20, t_max: 980, eta_c: 0.85, eta_t: 0.88, epsilon_reg: 0.7, mass_flow: 1 } },
+    { label: 'Caso esame', values: { p_low: 1, beta: 7.5, t_min: 20, t_max: 1020, eta_c: 0.86, eta_t: 0.89, epsilon_reg: 0.8, mass_flow: 1.2 } },
+    { label: 'Caso inefficiente', values: { p_low: 1, beta: 12, t_min: 30, t_max: 980, eta_c: 0.76, eta_t: 0.82, epsilon_reg: 0.35, mass_flow: 1 } },
+  ],
+};
 
 const BraytonPage = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [results, setResults] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
-  const [downloadingPDF, setDownloadingPDF] = useState(false);
-
-  const tsRef = useRef(null);
-  const pvRef = useRef(null);
-  const hsRef = useRef(null);
-  const schematicRef = useRef(null);
-
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mode = MODES[searchParams.get('variant')] ? searchParams.get('variant') : 'simple';
   const [inputs, setInputs] = useState({
     p_low: 1.0,
     beta: 10,
@@ -34,144 +74,30 @@ const BraytonPage = () => {
     t_max: 1000,
     eta_c: 0.85,
     eta_t: 0.88,
+    epsilon_reg: 0.75,
     mass_flow: 1.0,
   });
 
-  useEffect(() => {
-    if (!results) return;
+  const modeOptions = useMemo(
+    () => Object.entries(MODES).map(([key, config]) => ({
+      label: config.label,
+      active: key === mode,
+      onClick: () => {
+        const next = new URLSearchParams(searchParams);
+        next.set('variant', key);
+        setSearchParams(next);
+      },
+    })),
+    [mode, searchParams, setSearchParams],
+  );
 
-    const renderAllPlots = async () => {
-      const realPts = results.allPoints;
-      const idealPts = results.idealPoints;
-
-      const realPathOptions = [
-        { processType: 'polytropic', model: 'ideal-gas' },
-        { processType: 'isobaric', model: 'ideal-gas' },
-        { processType: 'polytropic', model: 'ideal-gas' },
-        { processType: 'isobaric', model: 'ideal-gas' },
-      ];
-
-      const idealPathOptions = [
-        { processType: 'isentropic', model: 'ideal-gas' },
-        { processType: 'isobaric', model: 'ideal-gas' },
-        { processType: 'isentropic', model: 'ideal-gas' },
-        { processType: 'isobaric', model: 'ideal-gas' },
-      ];
-
-      const [realPaths, idealPaths] = await Promise.all([
-        Promise.all([
-          generateProcessPath(realPts[0], realPts[1], 'Air', 64, realPathOptions[0]),
-          generateProcessPath(realPts[1], realPts[2], 'Air', 64, realPathOptions[1]),
-          generateProcessPath(realPts[2], realPts[3], 'Air', 64, realPathOptions[2]),
-          generateProcessPath(realPts[3], realPts[0], 'Air', 64, realPathOptions[3]),
-        ]),
-        Promise.all([
-          generateProcessPath(idealPts[0], idealPts[1], 'Air', 64, idealPathOptions[0]),
-          generateProcessPath(idealPts[1], idealPts[2], 'Air', 64, idealPathOptions[1]),
-          generateProcessPath(idealPts[2], idealPts[3], 'Air', 64, idealPathOptions[2]),
-          generateProcessPath(idealPts[3], idealPts[0], 'Air', 64, idealPathOptions[3]),
-        ]),
-      ]);
-
-      const addIdealTraces = (mapperX, mapperY) =>
-        idealPaths.map((path) => addTrace(path.map(mapperX), path.map(mapperY), {
-          color: IDEAL_COLOR,
-          width: 2,
-          dash: 'dash',
-          mode: 'lines',
-        }));
-
-      if (tsRef.current) {
-        const data = [
-          ...realPaths.map((path, index) =>
-            addTrace(path.map((p) => p.s), path.map((p) => p.t), {
-              name: `Tratto ${index + 1}`,
-              color: SEGMENT_COLORS[index],
-              width: 3,
-              mode: 'lines',
-            }),
-          ),
-          ...addIdealTraces((p) => p.s, (p) => p.t),
-          addTrace(realPts.map((p) => p.s), realPts.map((p) => p.t), {
-            color: COLOR,
-            mode: 'markers',
-            markerSize: 10,
-          }),
-        ];
-        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Temperatura T (°C)');
-        layout.annotations = pointAnnotations(
-          realPts.map((p) => ({ x: p.s, y: p.t })),
-          ['1\nAspirazione', '2\nCompressore', '3\nCombustore', '4\nTurbina'],
-          COLOR,
-        );
-        renderPlot(tsRef.current, data, layout, plotConfig);
-      }
-
-      if (pvRef.current) {
-        const pvData = [
-          ...realPaths.map((path, index) =>
-            addTrace(path.map((p) => p.v), path.map((p) => p.p), {
-              name: `Tratto ${index + 1}`,
-              color: SEGMENT_COLORS[index],
-              width: 3,
-              mode: 'lines',
-            }),
-          ),
-          ...addIdealTraces((p) => p.v, (p) => p.p),
-          addTrace(realPts.map((p) => p.v), realPts.map((p) => p.p), {
-            color: COLOR,
-            mode: 'markers',
-            markerSize: 10,
-          }),
-        ];
-        const allV = pvData.flatMap((t) => t.x);
-        const allP = pvData.flatMap((t) => t.y);
-        const layout = plotLayout('Volume specifico v (m\u00B3/kg)', 'Pressione P (bar)', {
-          xaxis: { type: 'log', range: clampLogRange(allV, { minMag: -3, maxMag: 2 }) },
-          yaxis: { type: 'log', range: clampLogRange(allP, { minMag: -1, maxMag: 3 }) },
-        });
-        layout.annotations = pointAnnotations(realPts.map((p) => ({ x: p.v, y: p.p })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(pvRef.current, pvData, layout, plotConfig);
-      }
-
-      if (hsRef.current) {
-        const data = [
-          ...realPaths.map((path, index) =>
-            addTrace(path.map((p) => p.s), path.map((p) => p.h), {
-              name: `Tratto ${index + 1}`,
-              color: SEGMENT_COLORS[index],
-              width: 3,
-              mode: 'lines',
-            }),
-          ),
-          ...addIdealTraces((p) => p.s, (p) => p.h),
-          addTrace(realPts.map((p) => p.s), realPts.map((p) => p.h), {
-            color: COLOR,
-            mode: 'markers',
-            markerSize: 10,
-          }),
-        ];
-        const layout = plotLayout('Entropia s (kJ/(kg·K))', 'Entalpia h (kJ/kg)');
-        layout.annotations = pointAnnotations(realPts.map((p) => ({ x: p.s, y: p.h })), ['1', '2', '3', '4'], COLOR);
-        renderPlot(hsRef.current, data, layout, plotConfig);
-      }
-    };
-
-    renderAllPlots();
-    return () => {
-      cleanupPlot(tsRef.current);
-      cleanupPlot(pvRef.current);
-      cleanupPlot(hsRef.current);
-    };
-  }, [results]);
-
-  const canCalculate = isFiniteNumber(inputs.p_low)
-    && isFiniteNumber(inputs.beta)
-    && isFiniteNumber(inputs.t_min)
-    && isFiniteNumber(inputs.t_max)
-    && isFiniteNumber(inputs.eta_c)
-    && isFiniteNumber(inputs.eta_t)
-    && isFiniteNumber(inputs.mass_flow)
+  const canCalculate = Number.isFinite(inputs.p_low)
+    && Number.isFinite(inputs.beta)
+    && Number.isFinite(inputs.t_min)
+    && Number.isFinite(inputs.t_max)
+    && Number.isFinite(inputs.eta_c)
+    && Number.isFinite(inputs.eta_t)
+    && Number.isFinite(inputs.mass_flow)
     && inputs.p_low > 0
     && inputs.beta > 1
     && inputs.t_max > inputs.t_min
@@ -179,183 +105,189 @@ const BraytonPage = () => {
     && inputs.eta_c <= 1
     && inputs.eta_t > 0
     && inputs.eta_t <= 1
-    && inputs.mass_flow > 0;
-
-  const calculate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const pHigh = inputs.p_low * inputs.beta;
-      const cycle = calcBraytonCycle({
-        p1Bar: inputs.p_low,
-        t1C: inputs.t_min,
-        p2Bar: pHigh,
-        t3C: inputs.t_max,
-        etaComp: inputs.eta_c,
-        etaTurb: inputs.eta_t,
-        massFlow: inputs.mass_flow,
-      });
-
-      setResults({
-        allPoints: cycle.realPoints,
-        idealPoints: cycle.idealPoints,
-        stats: cycle.stats,
-      });
-    } catch (calculationError) {
-      setError('Parametri non validi: controlla rapporto di compressione, temperature e rendimenti.');
-      console.error(calculationError);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownloadPDF = useCallback(async () => {
-    if (!results) return;
-    setDownloadingPDF(true);
-    try {
-      const { exportToPDF } = await import('../utils/pdfExport');
-      await exportToPDF({
-        title: 'Brayton-Joule',
-        accentColor: COLOR,
-        inputs,
-        stats: results.stats,
-        points: results.allPoints.map((p, index) => ({
-          label: ['1: Aspir.', '2: Comp.', '3: Comb.', '4: Turb.'][index],
-          t: p.t,
-          p: p.p,
-          h: p.h,
-          s: p.s,
-          v: p.v,
-        })),
-        formulas: [
-          {
-            label: 'Lavoro compressore',
-            latex: 'w_c = c_p (T_2 - T_1)',
-            value: results.stats.wc,
-            numeric: `1.005 \u00B7 (${results.allPoints[1].t.toFixed(2)} - ${results.allPoints[0].t.toFixed(2)}) = ${results.stats.wc.toFixed(2)} kJ/kg`,
-          },
-          {
-            label: 'Lavoro turbina',
-            latex: 'w_t = c_p (T_3 - T_4)',
-            value: results.stats.wt,
-            numeric: `1.005 \u00B7 (${results.allPoints[2].t.toFixed(2)} - ${results.allPoints[3].t.toFixed(2)}) = ${results.stats.wt.toFixed(2)} kJ/kg`,
-          },
-          {
-            label: 'Calore in ingresso',
-            latex: 'q_{in} = c_p (T_3 - T_2)',
-            value: results.stats.q_in,
-            numeric: `1.005 \u00B7 (${results.allPoints[2].t.toFixed(2)} - ${results.allPoints[1].t.toFixed(2)}) = ${results.stats.q_in.toFixed(2)} kJ/kg`,
-          },
-          {
-            label: 'Back work ratio',
-            latex: 'BWR = \\frac{w_c}{w_t}',
-            value: results.stats.bwr,
-            numeric: `${results.stats.wc.toFixed(2)} / ${results.stats.wt.toFixed(2)} \u00D7 100 = ${results.stats.bwr.toFixed(2)} %`,
-          },
-          {
-            label: 'Rendimento reale',
-            latex: '\\eta = \\frac{w_t - w_c}{q_{in}}',
-            value: results.stats.eta,
-            numeric: `((${results.stats.wt.toFixed(2)} - ${results.stats.wc.toFixed(2)}) / ${results.stats.q_in.toFixed(2)}) \u00D7 100 = ${results.stats.eta.toFixed(2)} %`,
-          },
-        ],
-        plotRefs: { ts: tsRef, pv: pvRef, hs: hsRef },
-        schematicRef,
-      });
-    } catch (downloadError) {
-      console.error(downloadError);
-    } finally {
-      setDownloadingPDF(false);
-    }
-  }, [results, inputs]);
-
-  const schematicProps = results ? {
-    points: results.allPoints,
-    pointLabels: ['1 Aspirazione', '2 Uscita compressore', '3 Ingresso turbina', '4 Scarico turbina'],
-    summaryItems: [
-      { label: 'Lavoro compressore', value: `${results.stats.wc.toFixed(1)} kJ/kg`, color: '#60A5FA' },
-      { label: 'Lavoro turbina', value: `${results.stats.wt.toFixed(1)} kJ/kg`, color: '#34D399' },
-      { label: 'Calore in', value: `${results.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
-      { label: 'Rendimento', value: `${results.stats.eta.toFixed(2)} %`, color: COLOR },
-    ],
-  } : null;
-
-  const diagramTabs = results ? [
-    { id: 'ts', label: 'T-s', active: activeTab === 0, onClick: () => setActiveTab(0), content: <div ref={tsRef} className="plot-area" /> },
-    { id: 'pv', label: 'P-v', active: activeTab === 1, onClick: () => setActiveTab(1), content: <div ref={pvRef} className="plot-area" /> },
-    { id: 'hs', label: 'h-s', active: activeTab === 2, onClick: () => setActiveTab(2), content: <div ref={hsRef} className="plot-area" /> },
-    { id: 'schema', label: 'Schema', active: activeTab === 3, onClick: () => setActiveTab(3), content: <div ref={schematicRef}><SchematicDiagram type="brayton" accentColor={COLOR} {...schematicProps} /></div> },
-  ] : null;
-
-  const formulasSection = results ? (
-    <FormulasSection
-      accentColor={COLOR}
-      points={results.allPoints.map((p, index) => ({
-        label: ['1: Aspir.', '2: Comp.', '3: Comb.', '4: Turb.'][index],
-        t: p.t,
-        p: p.p,
-        h: p.h,
-        s: p.s,
-        v: p.v,
-      }))}
-      formulas={[
-        { label: 'Rapporto di compressione in pressione', latex: '\\beta = \\frac{P_2}{P_1}', value: inputs.beta },
-        { label: '1 -> 2', latex: 'Compressione politropica reale nel compressore' },
-        { label: '2 -> 3', latex: 'Apporto di calore a pressione costante' },
-        { label: '3 -> 4', latex: 'Espansione politropica reale in turbina' },
-        { label: '4 -> 1', latex: 'Cessione di calore a pressione costante' },
-        { label: 'Lavoro compressore', latex: 'w_c = c_p (T_2 - T_1)', value: results.stats.wc },
-        { label: 'Lavoro turbina', latex: 'w_t = c_p (T_3 - T_4)', value: results.stats.wt },
-        { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: results.stats.q_in },
-        { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: results.stats.bwr },
-        { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: results.stats.eta, display: true },
-      ]}
-    />
-  ) : null;
-
-  const stats = results ? (
-    <div className="stats-row">
-      <StatCard label="Rendimento" value={`${results.stats.eta.toFixed(2)}%`} accent color={COLOR} />
-      <StatCard label="Potenza Netta" value={`${results.stats.power.toFixed(2)} kW`} />
-      <StatCard label="BWR" value={`${results.stats.bwr.toFixed(1)}%`} />
-      <StatCard label="Calore In" value={`${results.stats.q_in.toFixed(1)} kJ/kg`} />
-    </div>
-  ) : null;
+    && inputs.mass_flow > 0
+    && (mode !== 'regenerative' || (Number.isFinite(inputs.epsilon_reg) && inputs.epsilon_reg >= 0 && inputs.epsilon_reg <= 1));
 
   return (
-    <CyclePageLayout
+    <IdealGasCyclePage
       badge="Turbina a Gas"
       title="Ciclo"
-      titleAccent="Brayton-Joule"
+      titleAccent={mode === 'regenerative' ? 'Brayton Rigenerativo' : 'Brayton-Joule'}
       accentColor={COLOR}
-      loading={loading}
-      error={error}
-      results={results}
-      onCalculate={calculate}
-      canCalculate={canCalculate}
-      stats={stats}
-      diagramTabs={diagramTabs}
-      formulasSection={formulasSection}
-      onDownloadPDF={handleDownloadPDF}
-      downloadingPDF={downloadingPDF}
       EmptyIcon={Wind}
-    >
-      <h3 className="card-title">Parametri Aria</h3>
-      <div className="inputs-grid">
-        <InputField label="Pressione Iniziale" value={inputs.p_low} onChange={(value) => setInputs({ ...inputs, p_low: value })} unit="bar" accent={COLOR} />
-        <InputField label="Rapporto di Compressione" value={inputs.beta} onChange={(value) => setInputs({ ...inputs, beta: value })} accent={COLOR} />
-        <InputField label="Temperatura Ingresso" value={inputs.t_min} onChange={(value) => setInputs({ ...inputs, t_min: value })} unit="°C" accent={COLOR} />
-      </div>
-      <div className="inputs-row">
-        <InputField label="Temperatura Massima" value={inputs.t_max} onChange={(value) => setInputs({ ...inputs, t_max: value })} unit="°C" accent={COLOR} />
-        <InputField label="Rendimento Compressore" value={inputs.eta_c} onChange={(value) => setInputs({ ...inputs, eta_c: value })} step={0.01} min={0.5} max={1} accent={COLOR} />
-      </div>
-      <div className="inputs-row">
-        <InputField label="Rendimento Turbina" value={inputs.eta_t} onChange={(value) => setInputs({ ...inputs, eta_t: value })} step={0.01} min={0.5} max={1} accent={COLOR} />
-        <InputField label="Portata Massica" value={inputs.mass_flow} onChange={(value) => setInputs({ ...inputs, mass_flow: value })} unit="kg/s" step={0.1} accent={COLOR} />
-      </div>
-    </CyclePageLayout>
+      emptyText="Imposta il rapporto di compressione e osserva come cambiano lavori, BWR e rendimento del ciclo."
+      inputs={inputs}
+      setInputs={setInputs}
+      canCalculate={canCalculate}
+      plotDefinitions={plotDefinitions}
+      getPathOptions={({ mode: activeMode }) => activeMode === 'regenerative'
+        ? {
+          real: [
+            { processType: 'polytropic', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+            { processType: 'polytropic', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+          ],
+          ideal: [
+            { processType: 'isentropic', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+            { processType: 'isentropic', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+          ],
+        }
+        : {
+          real: [
+            { processType: 'polytropic', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+            { processType: 'polytropic', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+          ],
+          ideal: [
+            { processType: 'isentropic', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+            { processType: 'isentropic', model: 'ideal-gas' },
+            { processType: 'isobaric', model: 'ideal-gas' },
+          ],
+        }}
+      buildResult={async (values, activeMode) => {
+        const pHigh = values.p_low * values.beta;
+        const cycle = activeMode === 'regenerative'
+          ? calcRegenerativeBraytonCycle({
+            p1Bar: values.p_low,
+            t1C: values.t_min,
+            p2Bar: pHigh,
+            t3C: values.t_max,
+            etaComp: values.eta_c,
+            etaTurb: values.eta_t,
+            epsilonReg: values.epsilon_reg,
+            massFlow: values.mass_flow,
+          })
+          : calcBraytonCycle({
+            p1Bar: values.p_low,
+            t1C: values.t_min,
+            p2Bar: pHigh,
+            t3C: values.t_max,
+            etaComp: values.eta_c,
+            etaTurb: values.eta_t,
+            massFlow: values.mass_flow,
+          });
+
+        const points = cycle.realPoints;
+        const pointLabels = activeMode === 'regenerative'
+          ? ['1 Ingresso compressore', '2 Uscita compressore', '5 Uscita rigeneratore', '3 Ingresso turbina', '4 Uscita turbina', '6 Scarico rigenerato']
+          : ['1 Aspirazione', '2 Uscita compressore', '3 Ingresso turbina', '4 Scarico turbina'];
+
+        const formulas = activeMode === 'regenerative'
+          ? [
+            { label: 'Rapporto di compressione', latex: '\\beta = \\frac{P_2}{P_1}', value: values.beta },
+            { label: 'Efficacia rigeneratore', latex: '\\epsilon_{reg} = \\frac{T_5 - T_2}{T_4 - T_2}', value: cycle.stats.epsilon_reg, unit: '%' },
+            { label: 'Calore nel combustore', latex: 'q_{in} = c_p (T_3 - T_5)', value: cycle.stats.q_in },
+            { label: 'Guadagno dal rigeneratore', latex: 'q_{rec} = c_p (T_5 - T_2)', value: cycle.stats.regen_gain },
+            { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: cycle.stats.bwr },
+            { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: cycle.stats.eta, display: true },
+          ]
+          : [
+            { label: 'Rapporto di compressione', latex: '\\beta = \\frac{P_2}{P_1}', value: values.beta },
+            { label: '1 -> 2', latex: 'Compressione politropica reale nel compressore' },
+            { label: '2 -> 3', latex: 'Apporto di calore a pressione costante' },
+            { label: '3 -> 4', latex: 'Espansione politropica reale in turbina' },
+            { label: '4 -> 1', latex: 'Cessione di calore a pressione costante' },
+            { label: 'Lavoro compressore', latex: 'w_c = c_p (T_2 - T_1)', value: cycle.stats.wc },
+            { label: 'Lavoro turbina', latex: 'w_t = c_p (T_3 - T_4)', value: cycle.stats.wt },
+            { label: 'Calore in ingresso', latex: 'q_{in} = c_p (T_3 - T_2)', value: cycle.stats.q_in },
+            { label: 'Back work ratio', latex: 'BWR = \\frac{w_c}{w_t} \\times 100', value: cycle.stats.bwr },
+            { label: 'Rendimento reale', latex: '\\eta = \\frac{w_t - w_c}{q_{in}} \\times 100', value: cycle.stats.eta, display: true },
+          ];
+
+        return {
+          allPoints: points,
+          idealPoints: cycle.idealPoints,
+          schematicType: MODES[activeMode].schematicType,
+          pointLabels,
+          summaryItems: [
+            { label: 'Lavoro compressore', value: `${cycle.stats.wc.toFixed(1)} kJ/kg`, color: '#60A5FA' },
+            { label: 'Lavoro turbina', value: `${cycle.stats.wt.toFixed(1)} kJ/kg`, color: '#34D399' },
+            { label: 'Calore in', value: `${cycle.stats.q_in.toFixed(1)} kJ/kg`, color: '#F97316' },
+            ...(activeMode === 'regenerative'
+              ? [{ label: 'Guadagno rig.', value: `${cycle.stats.regen_gain.toFixed(1)} kJ/kg`, color: '#22D3EE' }]
+              : []),
+            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)} %`, color: COLOR },
+          ],
+          statCards: [
+            { label: 'Rendimento', value: `${cycle.stats.eta.toFixed(2)}%`, accent: true, color: COLOR },
+            { label: 'Potenza netta', value: `${cycle.stats.power.toFixed(2)} kW` },
+            { label: 'BWR', value: `${cycle.stats.bwr.toFixed(1)}%` },
+            { label: activeMode === 'regenerative' ? 'Recupero' : 'Calore in', value: activeMode === 'regenerative' ? `${cycle.stats.regen_gain.toFixed(1)} kJ/kg` : `${cycle.stats.q_in.toFixed(1)} kJ/kg` },
+          ],
+          formulas,
+          pdfTitle: activeMode === 'regenerative' ? 'Brayton rigenerativo' : 'Brayton-Joule',
+          formulaPointLabels: pointLabels,
+          pdfPointLabels: pointLabels,
+          pdfFormulas: formulas,
+          stats: cycle.stats,
+        };
+      }}
+      buildError={() => mode === 'regenerative'
+        ? 'Controlla i dati: beta > 1, T massima > T ingresso, rendimenti tra 0 e 1 ed efficacia del rigeneratore compresa tra 0 e 1.'
+        : 'Controlla i dati: beta > 1, T massima > T ingresso e rendimenti di compressore e turbina compresi tra 0 e 1.'}
+      renderInputs={({ inputs: values, setInputs: updateInputs, accentColor, mode: activeMode }) => (
+        <>
+          <h3 className="card-title">Parametri aria</h3>
+          <p className="input-hint">
+            {activeMode === 'regenerative'
+              ? 'Nel Brayton rigenerativo controlla soprattutto il rapporto tra T4 e T2: il recupero funziona solo se i gas in uscita turbina restano abbastanza caldi.'
+              : 'Nel Brayton semplice il punto chiave e il compromesso tra lavoro di turbina, lavoro di compressore e calore richiesto nel combustore.'}
+          </p>
+          <div className="inputs-grid">
+            <InputField label="Pressione iniziale" value={values.p_low} onChange={(value) => updateInputs((prev) => ({ ...prev, p_low: value }))} unit="bar" accent={accentColor} />
+            <InputField label="Rapporto di compressione" value={values.beta} onChange={(value) => updateInputs((prev) => ({ ...prev, beta: value }))} accent={accentColor} />
+            <InputField label="Temperatura ingresso" value={values.t_min} onChange={(value) => updateInputs((prev) => ({ ...prev, t_min: value }))} unit="degC" accent={accentColor} />
+          </div>
+          <div className="inputs-row">
+            <InputField label="Temperatura massima" value={values.t_max} onChange={(value) => updateInputs((prev) => ({ ...prev, t_max: value }))} unit="degC" accent={accentColor} />
+            <InputField label="Rendimento compressore" value={values.eta_c} onChange={(value) => updateInputs((prev) => ({ ...prev, eta_c: value }))} step={0.01} min={0.5} max={1} accent={accentColor} />
+          </div>
+          <div className="inputs-row">
+            <InputField label="Rendimento turbina" value={values.eta_t} onChange={(value) => updateInputs((prev) => ({ ...prev, eta_t: value }))} step={0.01} min={0.5} max={1} accent={accentColor} />
+            <InputField label="Portata massica" value={values.mass_flow} onChange={(value) => updateInputs((prev) => ({ ...prev, mass_flow: value }))} unit="kg/s" step={0.1} accent={accentColor} />
+          </div>
+          {activeMode === 'regenerative' && (
+            <InputField label="Efficacia rigeneratore" value={values.epsilon_reg} onChange={(value) => updateInputs((prev) => ({ ...prev, epsilon_reg: value }))} step={0.01} min={0} max={1} accent={accentColor} />
+          )}
+        </>
+      )}
+      modeOptions={modeOptions}
+      activeMode={mode}
+      presets={presetMap[mode]}
+      insights={{
+        takeaways: [
+          'Nel Brayton semplice il lavoro netto e la differenza tra turbina e compressore.',
+          'Un BWR alto significa che il compressore sta mangiando molta della potenza prodotta.',
+          mode === 'regenerative'
+            ? 'La rigenerazione riduce il combustibile richiesto ma solo se T4 rimane sopra T2.'
+            : 'Il tratto 2-3 isobaro lega direttamente combustore, T massima e calore in ingresso.',
+        ],
+        commonMistake: 'Confondere beta con il rapporto di temperatura: beta agisce sulle temperature isentropiche, ma i rendimenti reali spostano gli stati 2 e 4.',
+        compareNote: MODES[mode].compareNote,
+      }}
+      compareLinks={[
+        { label: 'Brayton semplice', route: '/brayton?variant=simple' },
+        { label: 'Brayton rigenerativo', route: '/brayton?variant=regenerative' },
+        { label: 'Ciclo combinato', route: '/ciclo-combinato' },
+      ]}
+      legendItems={[
+        { label: 'Calore entrante', color: '#F97316' },
+        { label: 'Calore uscente', color: '#94A3B8' },
+        { label: 'Lavoro utile', color: '#34D399' },
+        { label: 'Compressione', color: '#60A5FA' },
+      ]}
+    />
   );
 };
 
 export default BraytonPage;
+

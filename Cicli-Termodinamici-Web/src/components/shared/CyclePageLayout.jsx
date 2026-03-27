@@ -1,5 +1,6 @@
 import React from 'react';
-import { Play, RotateCcw, AlertCircle, Loader2, Download } from 'lucide-react';
+import { Play, RotateCcw, AlertCircle, Loader2, Download, ArrowRightLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const CyclePageLayout = ({
   badge,
@@ -19,18 +20,116 @@ const CyclePageLayout = ({
   formulasSection,
   onDownloadPDF,
   downloadingPDF,
+  modeOptions = [],
+  presets = [],
+  onApplyPreset,
+  insights,
+  compareLinks = [],
+  legendItems = [],
 }) => {
   return (
     <div className="features-section cycle-page">
-      <div className="section-header">
+      <div className="section-header section-header-left">
         <div className="section-badge">{badge}</div>
         <h2 className="section-title">
           {title} <span style={{ color: accentColor }}>{titleAccent}</span>
         </h2>
       </div>
 
+      {(modeOptions.length > 0 || insights || compareLinks.length > 0 || legendItems.length > 0) && (
+        <div className="cycle-top-grid">
+          <div className="cycle-top-left glass">
+            {modeOptions.length > 0 && (
+              <div className="mode-toggle-group">
+                <span className="section-subtitle">Modalita</span>
+                <div className="mode-toggle-row">
+                  {modeOptions.map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      className={`mode-toggle ${option.active ? 'mode-toggle-active' : ''}`.trim()}
+                      onClick={option.onClick}
+                      style={option.active ? { borderColor: accentColor, color: accentColor } : {}}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {legendItems.length > 0 && (
+              <div className="cycle-legend">
+                {legendItems.map((item) => (
+                  <div key={item.label} className="cycle-legend-item">
+                    <span className="cycle-legend-swatch" style={{ background: item.color }} />
+                    <span>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {compareLinks.length > 0 && (
+              <div className="compare-strip">
+                <span className="section-subtitle">
+                  <ArrowRightLeft size={16} />
+                  Confronta con
+                </span>
+                <div className="compare-strip-links">
+                  {compareLinks.map((link) => (
+                    <Link key={link.route} to={link.route} className="compare-chip no-underline">
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {insights && (
+            <aside className="cycle-insights glass">
+              <div className="section-subtitle">Cosa osservare</div>
+              <div className="cycle-insight-list">
+                {insights.takeaways?.map((item) => (
+                  <p key={item}>{item}</p>
+                ))}
+              </div>
+              {insights.commonMistake && (
+                <div className="cycle-insight-block">
+                  <strong>Errore comune</strong>
+                  <p>{insights.commonMistake}</p>
+                </div>
+              )}
+              {insights.compareNote && (
+                <div className="cycle-insight-block">
+                  <strong>Confronto rapido</strong>
+                  <p>{insights.compareNote}</p>
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
+      )}
+
       <div className="cycle-layout">
         <div className="cycle-inputs glass">
+          {presets.length > 0 && onApplyPreset && (
+            <div className="preset-group">
+              <span className="section-subtitle">Preset didattici</span>
+              <div className="preset-row">
+                {presets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    className="preset-chip"
+                    onClick={() => onApplyPreset(preset.values)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {children}
           <button
             disabled={loading || !canCalculate}
