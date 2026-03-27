@@ -79,8 +79,9 @@ Impostazioni da usare:
 
 Note operative:
 
-- il file [`public/_redirects`](/C:/Users/andre/Desktop/ThermoHub/Cicli-Termodinamici-Web/public/_redirects) abilita il fallback SPA per React Router
 - il file [`public/_headers`](/C:/Users/andre/Desktop/ThermoHub/Cicli-Termodinamici-Web/public/_headers) aggiunge header base per la versione statica e cache lunga sugli asset compilati
+- non e necessario aggiungere un catch-all `_redirects` per questo deploy Cloudflare: con questa configurazione il fallback SPA viene gestito senza quella regola, evitando il loop segnalato da Wrangler
+- lo script `npm run build` pulisce `dist` prima della build, cosi Cloudflare non riutilizza file obsoleti dalla build cache
 - se colleghi il repository dalla root `ThermoHub`, su Cloudflare devi indicare come root la cartella `Cicli-Termodinamici-Web`
 - dopo il deploy, prova queste route direttamente dal browser:
   - `/`

@@ -236,15 +236,7 @@ const CarnotPage = () => {
         commonMistake: mode === 'reverse'
           ? 'Confrontare il COP reale con il rendimento di un motore: il COP e un rapporto diverso e puo essere maggiore di 1.'
           : 'Usare gradi Celsius nella formula del rendimento: Carnot richiede sempre temperature assolute.',
-        compareNote: mode === 'reverse'
-          ? 'Il Carnot inverso e il benchmark teorico da confrontare con il ciclo frigorifero reale a compressione di vapore.'
-          : 'Il Carnot motore fissa il tetto massimo di rendimento per ogni ciclo termico che lavora tra le stesse sorgenti.',
       }}
-      compareLinks={[
-        { label: 'Motore Carnot', route: '/carnot?mode=engine' },
-        { label: 'Carnot inverso', route: '/carnot?mode=reverse' },
-        { label: 'Frigorifero', route: '/frigo' },
-      ]}
       legendItems={[
         { label: 'Calore dalla sorgente calda', color: '#EF4444' },
         { label: 'Calore verso sorgente fredda', color: '#3B82F6' },

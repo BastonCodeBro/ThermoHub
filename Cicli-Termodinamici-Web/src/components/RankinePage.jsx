@@ -19,19 +19,16 @@ const VARIANTS = {
     label: 'Rankine semplice',
     title: 'Rankine',
     schematicType: 'rankine',
-    compareNote: 'Il Rankine semplice usa vapore saturo secco in ingresso turbina: e la base per leggere poi Hirn e reheat.',
   },
   hirn: {
     label: 'Rankine-Hirn',
     title: 'Rankine-Hirn',
     schematicType: 'rankine',
-    compareNote: 'Nel ciclo Hirn il surriscaldamento alza il lavoro di turbina e riduce l umidita in uscita.',
   },
   reheat: {
     label: 'Rankine con risurriscaldamento',
     title: 'Rankine con Risurriscaldamento',
     schematicType: 'reheat-rankine',
-    compareNote: 'Il risurriscaldamento divide l espansione in due stadi e mantiene il vapore piu secco nella turbina LP.',
   },
 };
 
@@ -465,14 +462,7 @@ const RankinePage = () => {
         commonMistake: variant === 'reheat'
           ? 'Mettere la pressione di reheat sopra la pressione di caldaia o sotto quella di condensazione: fisicamente il secondo stadio va sempre fra le due.'
           : 'Confondere il Rankine semplice con l Hirn: nel semplice il punto 3 e vapore saturo secco, nell Hirn e vapore surriscaldato.',
-        compareNote: VARIANTS[variant].compareNote,
       }}
-      compareLinks={[
-        { label: 'Rankine semplice', route: '/rankine?variant=simple' },
-        { label: 'Rankine-Hirn', route: '/rankine?variant=hirn' },
-        { label: 'Rankine reheat', route: '/rankine?variant=reheat' },
-        { label: 'Ciclo combinato', route: '/ciclo-combinato' },
-      ]}
       legendItems={[
         { label: 'Apporto di calore', color: '#EF4444' },
         { label: 'Espansione utile', color: '#F97316' },

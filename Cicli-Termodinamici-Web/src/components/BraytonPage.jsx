@@ -11,12 +11,10 @@ const MODES = {
   simple: {
     label: 'Brayton semplice',
     schematicType: 'brayton',
-    compareNote: 'La variante rigenerativa non cambia il lavoro netto ma riduce il calore richiesto nel combustore.',
   },
   regenerative: {
     label: 'Brayton rigenerativo',
     schematicType: 'regenerative-brayton',
-    compareNote: 'La rigenerazione e utile solo quando i gas in uscita turbina sono ancora piu caldi dell aria compressa.',
   },
 };
 
@@ -29,7 +27,7 @@ const plotDefinitions = [
     xLabel: 'Entropia s (kJ/(kg K))',
     yLabel: 'Temperatura T (degC)',
     getAnnotations: ({ points, accentColor }) =>
-      pointAnnotations(points.map((point) => ({ x: point.s, y: point.t })), points.map((point) => point.name ?? ''), accentColor),
+      pointAnnotations(points.map((point) => ({ x: point.s, y: point.t })), points.map((_, index) => `${index + 1}`), accentColor),
   },
   {
     id: 'pv',
@@ -272,13 +270,7 @@ const BraytonPage = () => {
             : 'Il tratto 2-3 isobaro lega direttamente combustore, T massima e calore in ingresso.',
         ],
         commonMistake: 'Confondere beta con il rapporto di temperatura: beta agisce sulle temperature isentropiche, ma i rendimenti reali spostano gli stati 2 e 4.',
-        compareNote: MODES[mode].compareNote,
       }}
-      compareLinks={[
-        { label: 'Brayton semplice', route: '/brayton?variant=simple' },
-        { label: 'Brayton rigenerativo', route: '/brayton?variant=regenerative' },
-        { label: 'Ciclo combinato', route: '/ciclo-combinato' },
-      ]}
       legendItems={[
         { label: 'Calore entrante', color: '#F97316' },
         { label: 'Calore uscente', color: '#94A3B8' },

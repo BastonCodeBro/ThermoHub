@@ -179,12 +179,7 @@ const DualPage = () => {
           'A parita di r, aumentare alpha intensifica la quota isocora mentre rc allunga la parte isobara.',
         ],
         commonMistake: 'Usare alpha e rc come se controllassero la stessa cosa: alpha agisce sul salto di pressione isocoro, rc sull estensione della fase isobara.',
-        compareNote: 'Usa i link rapidi per vedere come il Duale si colloca tra Otto e Diesel a parita di rapporto di compressione.',
       }}
-      compareLinks={[
-        { label: 'Otto', route: '/otto' },
-        { label: 'Diesel', route: '/diesel' },
-      ]}
       legendItems={[
         { label: 'Calore isocoro', color: '#F97316' },
         { label: 'Calore isobaro', color: '#22D3EE' },

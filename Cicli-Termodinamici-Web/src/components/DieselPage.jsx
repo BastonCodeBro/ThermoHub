@@ -60,7 +60,6 @@ const insights = {
     'Nel grafico P-v il tratto 2-3 orizzontale distingue subito il Diesel dall Otto.',
   ],
   commonMistake: 'Usare rc come se fosse un rapporto di compressione: rc e il rapporto tra i volumi durante la combustione isobara.',
-  compareNote: 'Rispetto all Otto, il calore entra a pressione costante; rispetto al Duale, manca la prima quota isocora di combustione.',
 };
 
 const legendItems = [
@@ -202,10 +201,6 @@ const DieselPage = () => {
       )}
       presets={presets}
       insights={insights}
-      compareLinks={[
-        { label: 'Otto', route: '/otto' },
-        { label: 'Duale', route: '/duale' },
-      ]}
       legendItems={legendItems}
     />
   );

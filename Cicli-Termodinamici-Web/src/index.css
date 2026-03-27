@@ -1489,27 +1489,6 @@ p { margin: 0; }
   width: 100%;
 }
 
-.schematic-reading-guide {
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.9rem 1rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.schematic-reading-guide strong {
-  font-size: 0.85rem;
-  color: var(--text-main);
-}
-
-.schematic-reading-guide p {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
 .schematic-details-block {
   display: grid;
   gap: 0.75rem;
@@ -1542,6 +1521,26 @@ p { margin: 0; }
   display: grid;
   gap: 0.6rem;
   min-width: 0;
+}
+
+.schematic-point-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.schematic-point-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--point-accent) 16%, rgba(30, 27, 75, 0.92));
+  border: 1px solid color-mix(in srgb, var(--point-accent) 42%, rgba(255, 255, 255, 0.16));
+  color: #f8fafc;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .schematic-point-label {

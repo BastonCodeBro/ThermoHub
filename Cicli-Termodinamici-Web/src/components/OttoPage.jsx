@@ -60,7 +60,6 @@ const insights = {
     'Nel ciclo Otto l apporto di calore avviene a volume costante: confrontalo con Diesel e Duale.',
   ],
   commonMistake: 'Confondere il rapporto di compressione con il rapporto di pressione: qui conta il rapporto tra i volumi del cilindro.',
-  compareNote: 'Rispetto al Diesel, il tratto 2-3 e isocoro; rispetto al Duale manca la parte isobara della combustione.',
 };
 
 const legendItems = [
@@ -201,10 +200,6 @@ const OttoPage = () => {
       )}
       presets={presets}
       insights={insights}
-      compareLinks={[
-        { label: 'Diesel', route: '/diesel' },
-        { label: 'Duale', route: '/duale' },
-      ]}
       legendItems={legendItems}
     />
   );

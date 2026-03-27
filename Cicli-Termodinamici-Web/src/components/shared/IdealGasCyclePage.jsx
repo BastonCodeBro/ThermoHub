@@ -33,7 +33,6 @@ const IdealGasCyclePage = ({
   activeMode,
   presets = [],
   insights,
-  compareLinks = [],
   legendItems = [],
   segmentColors = DEFAULT_SEGMENT_COLORS,
 }) => {
@@ -129,7 +128,7 @@ const IdealGasCyclePage = ({
           ? annotations
           : pointAnnotations(
               points.map((point) => ({ x: point[plot.xKey], y: point[plot.yKey] })),
-              plot.annotationLabels ?? results.pointLabels ?? points.map((_, index) => `${index + 1}`),
+              plot.annotationLabels ?? results.annotationLabels ?? points.map((_, index) => `${index + 1}`),
               accentColor,
             );
 
@@ -275,7 +274,6 @@ const IdealGasCyclePage = ({
       presets={presets}
       onApplyPreset={handleApplyPreset}
       insights={insights}
-      compareLinks={compareLinks}
       legendItems={legendItems}
     >
       {renderInputs({ inputs, setInputs, accentColor, mode: activeMode })}

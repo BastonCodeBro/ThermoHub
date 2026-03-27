@@ -352,13 +352,7 @@ const RefrigerationPage = () => {
             'Il punto 2s ti aiuta a leggere quanto la compressione reale si allontana da quella ideale.',
           ],
         commonMistake: 'Usare lo stesso COP senza distinguere il lato utile: frigorifero e pompa di calore hanno lo stesso ciclo ma obiettivi energetici diversi.',
-        compareNote: 'Confronta questo ciclo con Carnot inverso per capire quanto il ciclo reale resta lontano dal limite teorico.',
       }}
-      compareLinks={[
-        { label: 'Frigorifero', route: '/frigo?mode=refrigerator' },
-        { label: 'Pompa di calore', route: '/frigo?mode=heat-pump' },
-        { label: 'Carnot inverso', route: '/carnot?mode=reverse' },
-      ]}
       legendItems={[
         { label: 'Calore entrante', color: '#38BDF8' },
         { label: 'Calore uscente', color: '#F87171' },

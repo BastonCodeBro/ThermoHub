@@ -296,13 +296,7 @@ const CombinedCyclePage = () => {
           'Il rendimento totale cresce quando il blocco Brayton scarica ancora gas abbastanza caldi da alimentare bene il Rankine.',
         ],
         commonMistake: 'Sommare i rendimenti percentuali dei due cicli: quello corretto si ottiene sommando le potenze e confrontandole con il calore combustibile del blocco gas.',
-        compareNote: 'Confronta il ciclo combinato con il Brayton rigenerativo: entrambi recuperano calore, ma qui lo si trasforma in una seconda potenza utile.',
       }}
-      compareLinks={[
-        { label: 'Brayton semplice', route: '/brayton?variant=simple' },
-        { label: 'Brayton rigenerativo', route: '/brayton?variant=regenerative' },
-        { label: 'Rankine-Hirn', route: '/rankine?variant=hirn' },
-      ]}
       legendItems={[
         { label: 'Recupero HRSG', color: '#F59E0B' },
         { label: 'Potenza blocco gas', color: '#34D399' },

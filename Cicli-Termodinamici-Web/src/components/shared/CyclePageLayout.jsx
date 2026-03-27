@@ -1,6 +1,5 @@
 import React from 'react';
-import { Play, RotateCcw, AlertCircle, Loader2, Download, ArrowRightLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Play, RotateCcw, AlertCircle, Loader2, Download } from 'lucide-react';
 
 const CyclePageLayout = ({
   badge,
@@ -24,7 +23,6 @@ const CyclePageLayout = ({
   presets = [],
   onApplyPreset,
   insights,
-  compareLinks = [],
   legendItems = [],
 }) => {
   return (
@@ -36,7 +34,7 @@ const CyclePageLayout = ({
         </h2>
       </div>
 
-      {(modeOptions.length > 0 || insights || compareLinks.length > 0 || legendItems.length > 0) && (
+      {(modeOptions.length > 0 || insights || legendItems.length > 0) && (
         <div className="cycle-top-grid">
           <div className="cycle-top-left glass">
             {modeOptions.length > 0 && (
@@ -68,22 +66,6 @@ const CyclePageLayout = ({
                 ))}
               </div>
             )}
-
-            {compareLinks.length > 0 && (
-              <div className="compare-strip">
-                <span className="section-subtitle">
-                  <ArrowRightLeft size={16} />
-                  Confronta con
-                </span>
-                <div className="compare-strip-links">
-                  {compareLinks.map((link) => (
-                    <Link key={link.route} to={link.route} className="compare-chip no-underline">
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {insights && (
@@ -98,12 +80,6 @@ const CyclePageLayout = ({
                 <div className="cycle-insight-block">
                   <strong>Errore comune</strong>
                   <p>{insights.commonMistake}</p>
-                </div>
-              )}
-              {insights.compareNote && (
-                <div className="cycle-insight-block">
-                  <strong>Confronto rapido</strong>
-                  <p>{insights.compareNote}</p>
                 </div>
               )}
             </aside>
