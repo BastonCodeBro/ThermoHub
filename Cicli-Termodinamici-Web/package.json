@@ -7,10 +7,11 @@
     "dev": "vite",
     "build": "node -e \"require('node:fs').rmSync('dist',{ recursive:true, force:true })\" && vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "test": "vitest run",
     "solver:dev": "node solver/openmodelica-solver-server.mjs",
-    "thermo-solver:dev": "node solver/thermo-cycle-solver-server.mjs"
+    "thermo-solver:dev": "node solver/thermo-cycle-solver-server.mjs",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
@@ -27,6 +28,7 @@
     "react-router-dom": "^7.13.2"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.30.2",
     "@eslint/js": "^9.39.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -39,6 +41,7 @@
     "globals": "^17.4.0",
     "jsdom": "^27.0.1",
     "vite": "^8.0.1",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wrangler": "^4.78.0"
   }
 }
