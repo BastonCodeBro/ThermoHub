@@ -851,6 +851,29 @@ const renderMotionOverlay = (component, motionState, color) => {
   );
 };
 
+const renderValveCommandOverlay = (component, nodeState) => {
+  if (component?.simBehavior?.kind !== 'valve') {
+    return null;
+  }
+
+  const commandType = nodeState?.commandType;
+
+  if (!commandType) {
+    return null;
+  }
+
+  return (
+    <g opacity="0.82">
+      <g transform="translate(6 62) scale(0.2)">
+        <CommandSymbol component={{ symbolVariant: { style: commandType } }} color="#94A3B8" />
+      </g>
+      <text x="80" y="14" textAnchor="middle" fill="#94A3B8" fontSize="8" fontWeight="800">
+        {commandType.replace(/-/g, ' ')}
+      </text>
+    </g>
+  );
+};
+
 const FluidPowerSymbol = ({ component, active = false, label, className = '', motionState = null, nodeState = null, reading = null }) => {
   const color = domainColor(component, active);
   const svgClassName = ['fluid-symbol', className].filter(Boolean).join(' ');
@@ -858,6 +881,7 @@ const FluidPowerSymbol = ({ component, active = false, label, className = '', mo
   return (
     <svg viewBox="0 0 160 100" className={svgClassName} role="img" aria-label={label ?? component.label}>
       {renderSymbol(component, color, nodeState)}
+      {renderValveCommandOverlay(component, nodeState)}
       {renderMotionOverlay(component, motionState, color)}
       {reading?.active && component.symbol === 'instrument' && renderReadingOverlay(component, reading, color)}
     </svg>

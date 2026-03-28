@@ -1,4 +1,4 @@
-import { createFluidPowerFeatureState, setFluidPowerProjectMode } from './fluidPowerState';
+import { createFluidPowerFeatureState } from './fluidPowerState';
 
 const replaceActiveWorkspace = (state, updater) => ({
   ...state,
@@ -23,11 +23,6 @@ export const fluidPowerReducer = (state, action) => {
           ...state.ui,
           activeDomain: action.domain,
         },
-      };
-    case 'SET_PROJECT_MODE':
-      return {
-        ...state,
-        projectMeta: setFluidPowerProjectMode(state.projectMeta, action.mode),
       };
     case 'UPDATE_ACTIVE_WORKSPACE':
       return replaceActiveWorkspace(state, action.updater);

@@ -16,7 +16,7 @@ describe('FluidPowerLabPage', () => {
     render(<FluidPowerLabPage />);
 
     expect(screen.getByRole('button', { name: /^Aggiungi Pompa idraulica$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Studente$/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/Workspace locale/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Pneumatica/i }));
 
@@ -36,7 +36,7 @@ describe('FluidPowerLabPage', () => {
     expect(screen.getByText(/Porte incompatibili/i)).toBeInTheDocument();
   });
 
-  test('starts a valid minimal hydraulic simulation', () => {
+  test('starts a valid minimal hydraulic simulation', async () => {
     render(<FluidPowerLabPage />);
 
     addComponent(/^Aggiungi Pompa idraulica$/i);
@@ -44,45 +44,53 @@ describe('FluidPowerLabPage', () => {
     addComponent(/^Aggiungi Cilindro a singolo effetto$/i);
     addComponent(/^Aggiungi Serbatoio$/i);
 
-    fireEvent.click(screen.getByRole('button', { name: /Porta P di Pompa idraulica 1/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Porta P di Valvola 3\/2 monostabile 1/i }));
+    fireEvent.click(screen.getByLabelText(/Porta P di Pompa idraulica 1/i));
+    fireEvent.click(screen.getByLabelText(/Porta P di Valvola 3\/2 monostabile 1/i));
 
-    fireEvent.click(screen.getByRole('button', { name: /Porta A di Valvola 3\/2 monostabile 1/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Porta A di Cilindro a singolo effetto 1/i }));
+    fireEvent.click(screen.getByLabelText(/Porta A di Valvola 3\/2 monostabile 1/i));
+    fireEvent.click(screen.getByLabelText(/Porta A di Cilindro a singolo effetto 1/i));
 
-    fireEvent.click(screen.getByRole('button', { name: /Porta R di Valvola 3\/2 monostabile 1/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Porta T di Serbatoio 1/i }));
+    fireEvent.click(screen.getByLabelText(/Porta R di Valvola 3\/2 monostabile 1/i));
+    fireEvent.click(screen.getByLabelText(/Porta T di Serbatoio 1/i));
 
     fireEvent.click(screen.getByRole('button', { name: /Commuta Valvola 3\/2 monostabile 1/i }));
     fireEvent.click(screen.getByRole('button', { name: /Avvia schema/i }));
 
-    expect(screen.getAllByText(/Schema avviato/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/estensione/i).length).toBeGreaterThan(0);
-  });
+    expect((await screen.findAllByText(/Schema avviato/i)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/estensione/i)).length).toBeGreaterThan(0);
+  }, 10000);
 
-  test('switches to engineer mode and persists mode in autosave', async () => {
+  test('updates the selected valve command from the inspector', () => {
     render(<FluidPowerLabPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: /^Ingegnere$/i }));
+    addComponent(/^Aggiungi Valvola 3\/2 monostabile$/i);
+    fireEvent.click(screen.getAllByText(/Valvola 3\/2 monostabile 1/i)[0]);
+    fireEvent.change(screen.getByLabelText(/Tipo comando distributore/i), {
+      target: { value: 'solenoid' },
+    });
 
-    expect(screen.getByRole('button', { name: /^Ingegnere$/i })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText(/Inspector tecnico/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Checklist didattica/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Solenoide/i).length).toBeGreaterThan(0);
+  });
+
+  test('persists autosave without project mode metadata', async () => {
+    render(<FluidPowerLabPage />);
+
+    addComponent(/^Aggiungi Pompa idraulica$/i);
 
     await waitFor(() => {
       const saved = JSON.parse(window.localStorage.getItem(FLUID_POWER_PROJECT_STORAGE_KEY));
-      expect(saved.mode).toBe('engineering');
+      expect(saved.mode).toBeUndefined();
+      expect(saved.workspaces.hydraulic.nodes).toHaveLength(1);
     });
   });
 
-  test('hydrates engineer mode from local storage', () => {
+  test('hydrates the simplified workspace from local storage', () => {
     window.localStorage.setItem(
       FLUID_POWER_PROJECT_STORAGE_KEY,
       JSON.stringify({
         type: 'thermohub-fluid-power-project',
         id: 'project-test',
         name: 'Fluid Power Project',
-        mode: 'engineering',
         units: 'metric',
         version: 1,
         author: 'ThermoHub',
@@ -90,7 +98,18 @@ describe('FluidPowerLabPage', () => {
         createdAt: '2026-03-27T10:00:00.000Z',
         updatedAt: '2026-03-27T10:00:00.000Z',
         workspaces: {
-          hydraulic: {},
+          hydraulic: {
+            nodes: [
+              {
+                instanceId: 'node-1',
+                componentId: 'hydraulic-pump',
+                x: 48,
+                y: 48,
+                label: 'Pompa idraulica 1',
+              },
+            ],
+            connections: [],
+          },
           pneumatic: {},
         },
       }),
@@ -98,7 +117,7 @@ describe('FluidPowerLabPage', () => {
 
     render(<FluidPowerLabPage />);
 
-    expect(screen.getByRole('button', { name: /^Ingegnere$/i })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText(/Pannello tecnico/i)).toBeInTheDocument();
+    expect(screen.getByText(/Pompa idraulica 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Pannello circuito/i)).toBeInTheDocument();
   });
 });

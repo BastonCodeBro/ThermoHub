@@ -19,7 +19,6 @@ const normalizeArray = (value) =>
 export const createProjectMeta = () => ({
   id: createProjectId(),
   name: 'Fluid Power Project',
-  mode: 'didactic',
   units: 'metric',
   version: FLUID_POWER_PROJECT_VERSION,
   author: 'ThermoHub',
@@ -113,7 +112,10 @@ const hydrateNode = (node) => {
     faults: Array.isArray(node.faults) ? node.faults : [],
     parameters: typeof node.parameters === 'object' && node.parameters ? node.parameters : {},
     locked: Boolean(node.locked),
-    state: node.state ?? createInitialNodeState(component),
+    state: {
+      ...createInitialNodeState(component),
+      ...(node.state ?? {}),
+    },
   };
 };
 
@@ -149,7 +151,6 @@ export const hydrateProjectDocument = (rawDocument, createWorkspace) => {
   const meta = {
     id: document.id ?? createProjectId(),
     name: document.name ?? 'Fluid Power Project',
-    mode: document.mode === 'engineering' ? 'engineering' : 'didactic',
     units: document.units ?? 'metric',
     version: document.version ?? FLUID_POWER_PROJECT_VERSION,
     author: document.author ?? 'ThermoHub',

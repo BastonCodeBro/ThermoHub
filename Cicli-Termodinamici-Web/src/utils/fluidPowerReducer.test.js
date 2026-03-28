@@ -6,21 +6,17 @@ import {
   selectActiveDomain,
   selectActiveWorkspace,
   selectConnectionVisualStates,
-  selectIsStudentMode,
 } from './fluidPowerSelectors';
 
 describe('fluidPowerReducer', () => {
-  test('switches active domain and project mode through the reducer', () => {
+  test('switches the active domain through the reducer', () => {
     let state = createFluidPowerReducerState();
 
     expect(selectActiveDomain(state)).toBe('hydraulic');
-    expect(selectIsStudentMode(state)).toBe(true);
 
     state = fluidPowerReducer(state, { type: 'SET_ACTIVE_DOMAIN', domain: 'pneumatic' });
-    state = fluidPowerReducer(state, { type: 'SET_PROJECT_MODE', mode: 'engineering' });
 
     expect(selectActiveDomain(state)).toBe('pneumatic');
-    expect(selectIsStudentMode(state)).toBe(false);
   });
 
   test('updates only the active workspace', () => {

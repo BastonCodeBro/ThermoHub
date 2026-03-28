@@ -43,8 +43,4 @@ export const createFluidPowerFeatureState = () => ({
   },
 });
 
-export const setFluidPowerProjectMode = (projectMeta, mode) =>
-  touchProjectMeta({
-    ...projectMeta,
-    mode,
-  });
+export const touchFluidPowerProjectMeta = (projectMeta) => touchProjectMeta(projectMeta);

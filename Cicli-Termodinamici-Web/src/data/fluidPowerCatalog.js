@@ -26,6 +26,24 @@ export const FLUID_POWER_CATEGORIES = [
   { id: 'simbologia-base', label: 'Simbologia base' },
 ];
 
+export const VALVE_COMMAND_OPTIONS = [
+  { id: 'pushbutton', label: 'Pulsante' },
+  { id: 'lever', label: 'Leva' },
+  { id: 'pedal', label: 'Pedale' },
+  { id: 'roller', label: 'Rullo' },
+  { id: 'solenoid', label: 'Solenoide' },
+  { id: 'double-solenoid', label: 'Doppio solenoide' },
+  { id: 'pilot-pressure', label: 'Pilotaggio pneumatico/idraulico' },
+  { id: 'combined-command', label: 'Comando combinato' },
+  { id: 'spring', label: 'Richiamo a molla' },
+];
+
+const VALVE_COMMAND_DEFAULTS = {
+  '3/2': 'pushbutton',
+  '4/2': 'double-solenoid',
+  '5/2': 'double-solenoid',
+};
+
 const makeDirectionalValve = ({
   id,
   domain,
@@ -520,6 +538,24 @@ export const getComponentDefinition = (componentId) => componentCatalogMap.get(c
 export const getComponentsByDomain = (domain) =>
   componentCatalog.filter((component) => component.domain === domain);
 
+export const getDefaultValveCommandType = (componentOrId) => {
+  const component =
+    typeof componentOrId === 'string' ? getComponentDefinition(componentOrId) : componentOrId;
+
+  if (component?.simBehavior?.kind !== 'valve') {
+    return null;
+  }
+
+  if (component.symbolVariant?.style === 'limit-valve') {
+    return 'roller';
+  }
+
+  return VALVE_COMMAND_DEFAULTS[component.simBehavior.family] ?? 'lever';
+};
+
+export const getValveCommandOption = (commandType) =>
+  VALVE_COMMAND_OPTIONS.find((option) => option.id === commandType) ?? null;
+
 export const createInitialNodeState = (componentOrId) => {
   const component =
     typeof componentOrId === 'string' ? getComponentDefinition(componentOrId) : componentOrId;
@@ -532,6 +568,7 @@ export const createInitialNodeState = (componentOrId) => {
     return {
       currentState:
         component.simBehavior.defaultState ?? component.simBehavior.states?.[0]?.id ?? null,
+      commandType: getDefaultValveCommandType(component),
     };
   }
 

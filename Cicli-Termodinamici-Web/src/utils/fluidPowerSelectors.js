@@ -2,10 +2,6 @@ import { createEmptyFluidPowerSnapshot } from './fluidPowerState';
 
 export const selectActiveDomain = (state) => state.ui?.activeDomain ?? 'hydraulic';
 
-export const selectMode = (state) => state.projectMeta?.mode ?? 'didactic';
-
-export const selectIsStudentMode = (state) => selectMode(state) !== 'engineering';
-
 export const selectActiveWorkspace = (state) =>
   state.workspaces?.[selectActiveDomain(state)] ?? null;
 
