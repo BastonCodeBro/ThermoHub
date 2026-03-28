@@ -1,4 +1,4 @@
-export const stateExams = [
+﻿export const stateExams = [
   {
     id: 'a056-ord25',
     code: 'A056',
@@ -9,8 +9,8 @@ export const stateExams = [
     solvedPdf: '/esami/Svolti/A056_ORD25%20SOLUZIONE%20-%20Meccanica_e_Macchine_Soluzioni_d_Esame.pdf',
     trace: [
       'Una moderna nave da carico e propulsa da un motore diesel a 2 tempi a corsa extra lunga che imprime 15 nodi. Dati noti: alesaggio 840 mm, 6 cilindri, regime 80 giri/min.',
-      'Richieste di prima parte: potenza utilizzabile per la propulsione, portata di vapore prodotta dalla caldaia a gas di scarico, consumo di combustibile per miglio, capacità dei depositi HFO per un'autonomia di 15.000 miglia.',
-      'La traccia chiede inoltre lo schema dell'impianto di produzione del vapore ausiliario con caldaia a gas di scarico.',
+      "Richieste di prima parte: potenza utilizzabile per la propulsione, portata di vapore prodotta dalla caldaia a gas di scarico, consumo di combustibile per miglio, capacita dei depositi HFO per un'autonomia di 15.000 miglia.",
+      "La traccia chiede inoltre lo schema dell'impianto di produzione del vapore ausiliario con caldaia a gas di scarico.",
     ],
     assumptions: [
       'Rapporto corsa/alesaggio S/D = 3,8, quindi S = 3,20 m.',
@@ -22,33 +22,33 @@ export const stateExams = [
     firstPart: {
       steps: [
         {
-          title: '1. Potenza disponibile all'asse',
+          title: "1. Potenza disponibile all'asse",
           body: [
-            'Il volume spazzato da un cilindro vale Vc = pi/4 · D^2 · S = pi/4 · 0,84^2 · 3,20 = 1,774 m3.',
-            'Il volume totale spazzato e Vtot = 6 · 1,774 = 10,65 m3. Essendo un due tempi, ogni giro corrisponde a un ciclo utile, quindi con n = 80/60 = 1,333 s^-1 la potenza efficace risulta P = pme · Vtot · n.',
-            'Sostituendo i valori si ottiene P = 2,1·10^6 · 10,65 · 1,333 = 29,8 MW, che rappresenta la potenza utilizzabile per la propulsione.',
+            'Il volume spazzato da un cilindro vale Vc = pi/4 Â· D^2 Â· S = pi/4 Â· 0,84^2 Â· 3,20 = 1,774 m3.',
+            'Il volume totale spazzato e Vtot = 6 Â· 1,774 = 10,65 m3. Essendo un due tempi, ogni giro corrisponde a un ciclo utile, quindi con n = 80/60 = 1,333 s^-1 la potenza efficace risulta P = pme Â· Vtot Â· n.',
+            'Sostituendo i valori si ottiene P = 2,1Â·10^6 Â· 10,65 Â· 1,333 = 29,8 MW, che rappresenta la potenza utilizzabile per la propulsione.',
           ],
         },
         {
           title: '2. Produzione di vapore con caldaia a gas di scarico',
           body: [
-            'La portata dei gas di scarico si stima come m_g = 4,9 · P = 4,9 · 29.792 = 145.983 kg/h.',
-            'Il calore recuperabile vale Q = eta · m_g · cp · DeltaT = 0,80 · 145.983 · 1,08 · (320 - 180) = 17,66 GJ/h.',
+            'La portata dei gas di scarico si stima come m_g = 4,9 Â· P = 4,9 Â· 29.792 = 145.983 kg/h.',
+            'Il calore recuperabile vale Q = eta Â· m_g Â· cp Â· DeltaT = 0,80 Â· 145.983 Â· 1,08 Â· (320 - 180) = 17,66 GJ/h.',
             'Assumendo produzione di vapore saturo a circa 8 bar da acqua alimento preriscaldata, il salto entalpico utile e circa 2.330 kJ/kg. La portata di vapore e quindi m_v = 17.660.000 / 2.330 = 7.580 kg/h, cioe circa 7,6 t/h.',
           ],
         },
         {
           title: '3. Consumo di combustibile per miglio',
           body: [
-            'Il consumo orario vale Ch = bsfc · P = 0,168 · 29.792 = 5.005 kg/h.',
-            'Alla velocità di 15 nodi la nave percorre 15 miglia in un ora, quindi il consumo per miglio è c_nm = 5.005 / 15 = 333,7 kg/nm.',
+            'Il consumo orario vale Ch = bsfc Â· P = 0,168 Â· 29.792 = 5.005 kg/h.',
+            'Alla velocitÃ  di 15 nodi la nave percorre 15 miglia in un ora, quindi il consumo per miglio Ã¨ c_nm = 5.005 / 15 = 333,7 kg/nm.',
           ],
         },
         {
           title: '4. Capacita dei depositi di HFO',
           body: [
             'Per 15.000 miglia a 15 nodi il tempo di navigazione e 15.000 / 15 = 1.000 h.',
-            'Il combustibile netto richiesto e m_f = 5.005 · 1.000 = 5.005.149 kg, cioe circa 5.005 t.',
+            'Il combustibile netto richiesto e m_f = 5.005 Â· 1.000 = 5.005.149 kg, cioe circa 5.005 t.',
             'Il volume netto e V = m / rho = 5.005.149 / 960 = 5.214 m3. Con un margine del 15% il volume di progetto diventa circa 5.996 m3.',
           ],
         },
@@ -70,18 +70,18 @@ export const stateExams = [
         code: 'B',
         title: 'Sistema di raffreddamento e tecnica bore-cooling',
         points: [
-          'Il raffreddamento del moderno diesel lento è organizzato in due circuiti distinti: LT per aria di sovralimentazione, lubrificante e ausiliari, HT per camicie, testate e zone termicamente più gravose.',
-          'Nel bore-cooling l'acqua non raffredda genericamente il blocco, ma scorre in fori ottenuti molto vicino alla camera di combustione, soprattutto attorno alla sede valvola o alla parte alta della canna.',
-          'Il vantaggio principale è la riduzione del gradiente termico locale: si limita la temperatura del cielo pistone e della fascia superiore della canna, si riduce il rischio di cricche e si migliora la lubrificazione del primo tratto.',
-          'Dal punto di vista costruttivo servono passaggi calibrati, buona qualità dell'acqua trattata, controllo della pressione del circuito e allarmi di temperatura per evitare ebollizione locale.',
+          'Il raffreddamento del moderno diesel lento Ã¨ organizzato in due circuiti distinti: LT per aria di sovralimentazione, lubrificante e ausiliari, HT per camicie, testate e zone termicamente piÃ¹ gravose.',
+          "Nel bore-cooling l'acqua non raffredda genericamente il blocco, ma scorre in fori ottenuti molto vicino alla camera di combustione, soprattutto attorno alla sede valvola o alla parte alta della canna.",
+          'Il vantaggio principale Ã¨ la riduzione del gradiente termico locale: si limita la temperatura del cielo pistone e della fascia superiore della canna, si riduce il rischio di cricche e si migliora la lubrificazione del primo tratto.',
+          "Dal punto di vista costruttivo servono passaggi calibrati, buona qualita dell'acqua trattata, controllo della pressione del circuito e allarmi di temperatura per evitare ebollizione locale.",
         ],
       },
       {
         code: 'C',
         title: 'Sovralimentazione di un moderno diesel due tempi',
         points: [
-          'Il sistema più comune è la turbina a gas di scarico con compressore centrifugo calettato sullo stesso albero: i gas in uscita dal motore cedono energia alla turbina, che aziona il compressore di lavaggio.',
-          'L'aria compressa viene poi raffreddata nell'aftercooler e inviata al ricevitore d'aria, da cui ogni cilindro preleva la portata necessaria nelle fasi di lavaggio e riempimento.',
+          'Il sistema piÃ¹ comune Ã¨ la turbina a gas di scarico con compressore centrifugo calettato sullo stesso albero: i gas in uscita dal motore cedono energia alla turbina, che aziona il compressore di lavaggio.',
+          "L'aria compressa viene poi raffreddata nell'aftercooler e inviata al ricevitore d'aria, da cui ogni cilindro preleva la portata necessaria nelle fasi di lavaggio e riempimento.",
           'Ai bassi carichi il sistema deve garantire sufficiente pressione di scavenging; per questo si adottano geometrie ottimizzate, turbo in parallelo o dispositivi ausiliari di supporto al transitorio.',
           'Lo schema funzionale minimo e: cilindri -> collettore scarico -> turbina -> camino, mentre sul lato aria si ha filtro -> compressore -> refrigeratore aria -> air receiver -> luci di travaso.',
         ],
@@ -97,9 +97,9 @@ export const stateExams = [
     sourcePdf: '/esami/originali/A056_ORD24.pdf',
     solvedPdf: '/esami/Svolti/A056_ORD24%20SOLUZIONE%20-%202024_COGAG_Propulsion_Resolution.pdf',
     trace: [
-      'Nave militare con propulsione turbo-riduttrice COGAG composta da quattro turbine a gas, potenza complessiva 78 MW, velocità massima 25 nodi.',
+      'Nave militare con propulsione turbo-riduttrice COGAG composta da quattro turbine a gas, potenza complessiva 78 MW, velocitÃ  massima 25 nodi.',
       'Dati noti: dislocamento 30.000 t, autonomia 8.000 miglia a 15 nodi, consumo orario di combustibile 19.000 kg/h.',
-      'Richieste: consumo specifico, rendimento termico effettivo, velocità di media e minima forza, combustibile necessario per 8.000 miglia e schema dell'apparato propulsivo.',
+      "Richieste: consumo specifico, rendimento termico effettivo, velocita di media e minima forza, combustibile necessario per 8.000 miglia e schema dell'apparato propulsivo.",
     ],
     assumptions: [
       'Le quattro turbine sono identiche e lavorano a piena potenza in massima forza.',
@@ -118,22 +118,22 @@ export const stateExams = [
         {
           title: '2. Rendimento termico effettivo',
           body: [
-            'Il rendimento si ottiene da eta = 3600 / (bsfc · PCI) = 3600 / (0,244 · 43.000) = 0,344.',
-            'Il rendimento termico effettivo dell'impianto vale quindi circa 34,4%, coerente con una turbina a gas navale semplice senza recupero.',
+            'Il rendimento si ottiene da eta = 3600 / (bsfc Â· PCI) = 3600 / (0,244 Â· 43.000) = 0,344.',
+            "Il rendimento termico effettivo dell'impianto vale quindi circa 34,4%, coerente con una turbina a gas navale semplice senza recupero.",
           ],
         },
         {
           title: '3. Velocita con due turbine e con una turbina',
           body: [
-            'Con due turbine attive la potenza disponibile e il 50% della massima: V_media = 25 · (0,5)^(1/3) = 19,8 nodi.',
-            'Con una sola turbina attiva si ha il 25% della potenza: V_min = 25 · (0,25)^(1/3) = 15,7 nodi.',
+            'Con due turbine attive la potenza disponibile e il 50% della massima: V_media = 25 Â· (0,5)^(1/3) = 19,8 nodi.',
+            'Con una sola turbina attiva si ha il 25% della potenza: V_min = 25 Â· (0,25)^(1/3) = 15,7 nodi.',
           ],
         },
         {
           title: '4. Carico di combustibile per 8.000 miglia a 15 nodi',
           body: [
-            'Il consumo economico a 15 nodi si stima con la legge cubica: Ch_15 = 19.000 · (15/25)^3 = 4.104 kg/h.',
-            'Il tempo di traversata e t = 8.000 / 15 = 533,3 h. Il carico richiesto e quindi m = 4.104 · 533,3 = 2.188.800 kg, cioe circa 2.189 t di combustibile.',
+            'Il consumo economico a 15 nodi si stima con la legge cubica: Ch_15 = 19.000 Â· (15/25)^3 = 4.104 kg/h.',
+            'Il tempo di traversata e t = 8.000 / 15 = 533,3 h. Il carico richiesto e quindi m = 4.104 Â· 533,3 = 2.188.800 kg, cioe circa 2.189 t di combustibile.',
           ],
         },
       ],
@@ -155,10 +155,10 @@ export const stateExams = [
         code: 'A',
         title: 'Produzione di acqua distillata a bordo',
         points: [
-          'Una soluzione molto diffusa è il distillatore sottovuoto che sfrutta l'acqua di camicia o il vapore ausiliario come sorgente termica.',
-          'L'acqua di mare entra nel condensatore-evaporatore, viene preriscaldata e successivamente vaporizzata in condizioni di bassa pressione, cosi da bollire a temperatura contenuta.',
-          'Il vapore separato dalle gocce saline attraversa un demister, condensa su superfici raffreddate dalla stessa acqua di mare di alimento e viene inviato al serbatoio del distillato dopo controllo di salinità.',
-          'Il vuoto è mantenuto da eiettore o pompa e l impianto richiede spurgo salamoia, salinometro, allarme deviazione e corretto dosaggio antincrostante.',
+          "Una soluzione molto diffusa e il distillatore sottovuoto che sfrutta l'acqua di camicia o il vapore ausiliario come sorgente termica.",
+          "L'acqua di mare entra nel condensatore-evaporatore, viene preriscaldata e successivamente vaporizzata in condizioni di bassa pressione, cosi da bollire a temperatura contenuta.",
+          'Il vapore separato dalle gocce saline attraversa un demister, condensa su superfici raffreddate dalla stessa acqua di mare di alimento e viene inviato al serbatoio del distillato dopo controllo di salinitÃ .',
+          'Il vuoto Ã¨ mantenuto da eiettore o pompa e l impianto richiede spurgo salamoia, salinometro, allarme deviazione e corretto dosaggio antincrostante.',
         ],
       },
       {
@@ -184,7 +184,7 @@ export const stateExams = [
     trace: [
       'Petroliera monoelica con due motori diesel due tempi a corsa super lunga. Ogni motore ha 12 cilindri, 650 kW per cilindro a 150 rpm e pme pari a 12 bar.',
       'Ogni cisterna di carico contiene 1.000 m3 di greggio; le operazioni di scarico usano due pompe centrifughe con prevalenza 100 m e tubazioni da 300 mm. Una cisterna va scaricata in un ora.',
-      'La traccia richiede dimensionamento del motore, rendimento, consumo orario, cassa HFO giornaliera, potenza delle pompe e velocità del greggio nelle tubazioni.',
+      'La traccia richiede dimensionamento del motore, rendimento, consumo orario, cassa HFO giornaliera, potenza delle pompe e velocitÃ  del greggio nelle tubazioni.',
     ],
     assumptions: [
       'Rapporto corsa/alesaggio S/D = 4, tipico di motore super long stroke.',
@@ -198,24 +198,24 @@ export const stateExams = [
         {
           title: '1. Dimensionamento di ciascun motore',
           body: [
-            'La potenza di ogni motore e P = 12 · 650 = 7.800 kW. Essendo un due tempi, Vtot = P / (pme · n) = 7,8·10^6 / (1,2·10^6 · 2,5) = 2,60 m3.',
-            'Il volume per cilindro e quindi 0,2167 m3. Ponendo S = 4D si ha Vc = pi/4 · D^2 · 4D = pi · D^3, da cui D = (Vc/pi)^(1/3) = 0,410 m e S = 1,640 m.',
+            'La potenza di ogni motore e P = 12 Â· 650 = 7.800 kW. Essendo un due tempi, Vtot = P / (pme Â· n) = 7,8Â·10^6 / (1,2Â·10^6 Â· 2,5) = 2,60 m3.',
+            'Il volume per cilindro e quindi 0,2167 m3. Ponendo S = 4D si ha Vc = pi/4 Â· D^2 Â· 4D = pi Â· D^3, da cui D = (Vc/pi)^(1/3) = 0,410 m e S = 1,640 m.',
           ],
         },
         {
           title: '2. Rendimento e consumo di combustibile',
           body: [
-            'Il rendimento termico effettivo vale eta = 3600 / (0,172 · 42.700) = 0,490, cioe 49,0%.',
-            'La potenza totale installata e 15.600 kW, quindi il consumo orario globale e Ch = 0,172 · 15.600 = 2.683 kg/h.',
-            'Per il service tank giornaliero si calcola m24 = 24 · 2.683 = 64.397 kg. Convertendo in volume e aggiungendo il 10% di riserva si ottiene Vg = 73,8 m3.',
+            'Il rendimento termico effettivo vale eta = 3600 / (0,172 Â· 42.700) = 0,490, cioe 49,0%.',
+            'La potenza totale installata e 15.600 kW, quindi il consumo orario globale e Ch = 0,172 Â· 15.600 = 2.683 kg/h.',
+            'Per il service tank giornaliero si calcola m24 = 24 Â· 2.683 = 64.397 kg. Convertendo in volume e aggiungendo il 10% di riserva si ottiene Vg = 73,8 m3.',
           ],
         },
         {
-          title: '3. Pompe di carico e velocità del greggio',
+          title: '3. Pompe di carico e velocitÃ  del greggio',
           body: [
             'Per scaricare 1.000 m3 in un ora serve una portata totale Q = 1.000/3.600 = 0,2778 m3/s. Con due pompe in parallelo, ogni pompa lavora a 0,1389 m3/s.',
-            'La potenza effettiva di ciascuna pompa e P = rho g Q H / eta = 900 · 9,81 · 0,1389 · 100 / 0,75 = 163,5 kW.',
-            'La velocità del greggio nella tubazione principale da 300 mm e v = Q / A = 0,2778 / (pi · 0,30^2 / 4) = 3,93 m/s.',
+            'La potenza effettiva di ciascuna pompa e P = rho g Q H / eta = 900 Â· 9,81 Â· 0,1389 Â· 100 / 0,75 = 163,5 kW.',
+            'La velocitÃ  del greggio nella tubazione principale da 300 mm e v = Q / A = 0,2778 / (pi Â· 0,30^2 / 4) = 3,93 m/s.',
           ],
         },
       ],
@@ -267,13 +267,13 @@ export const stateExams = [
     trace: [
       'Nave da crociera da 28.000 t con potenza complessiva di propulsione pari a 35.000 kW.',
       'La prova chiede numero e disposizione dei motori, dimensionamento, produzione massima di acqua calda sanitaria dal recupero sui gas di scarico, consumo orario di combustibile e rendimento termico effettivo.',
-      'Va inoltre rappresentato lo schema dell'impianto di propulsione con le apparecchiature per il trasferimento della potenza alle eliche.',
+      "Va inoltre rappresentato lo schema dell'impianto di propulsione con le apparecchiature per il trasferimento della potenza alle eliche.",
     ],
     assumptions: [
       'Configurazione scelta: due motori principali su due linee d asse, 17,5 MW ciascuno, per migliorare ridondanza e manovrabilita.',
       'Motori diesel 4 tempi medium speed da crociera, 12 cilindri a V, 500 rpm, pme = 24 bar e rapporto S/D = 1,2.',
       'Consumo specifico bsfc = 185 g/kWh; PCI del combustibile = 42.700 kJ/kg.',
-      'Potenza recuperabile per ACS assunta pari a 9,5 MW sul totale dell'impianto; riscaldamento acqua da 15 C a 60 C.',
+      "Potenza recuperabile per ACS assunta pari a 9,5 MW sul totale dell'impianto; riscaldamento acqua da 15 C a 60 C.",
     ],
     firstPart: {
       steps: [
@@ -281,22 +281,22 @@ export const stateExams = [
           title: '1. Numero, disposizione e dimensionamento dei motori',
           body: [
             'Per una nave da crociera con impianto tradizionale e ragionevole adottare due motori principali, uno per ciascuna linea d asse, con potenza unitaria 17,5 MW.',
-            'Per un quattro tempi il volume totale di un motore e Vtot = P / (pme · n/2) = 17,5·10^6 / (2,4·10^6 · 4,167) = 1,75 m3.',
+            'Per un quattro tempi il volume totale di un motore e Vtot = P / (pme Â· n/2) = 17,5Â·10^6 / (2,4Â·10^6 Â· 4,167) = 1,75 m3.',
             'Dividendo per 12 cilindri si ottiene Vc = 0,1458 m3. Con S = 1,2D si ricavano alesaggio D = 0,537 m e corsa S = 0,644 m.',
           ],
         },
         {
           title: '2. Acqua calda sanitaria producibile dal recupero',
           body: [
-            'La portata massima si ricava da m = Q / (cp · DeltaT) = 9.500 / (4,18 · 45) = 50,5 kg/s.',
+            'La portata massima si ricava da m = Q / (cp Â· DeltaT) = 9.500 / (4,18 Â· 45) = 50,5 kg/s.',
             'In termini orari corrisponde a circa 181,8 t/h di acqua calda, valore massimo teorico ottenibile se tutto il calore recuperabile viene destinato all utenza sanitaria.',
           ],
         },
         {
           title: '3. Consumo orario e rendimento',
           body: [
-            'Il consumo orario totale vale Ch = 0,185 · 35.000 = 6.475 kg/h.',
-            'Il rendimento termico effettivo risulta eta = 3600 / (0,185 · 42.700) = 45,6%.',
+            'Il consumo orario totale vale Ch = 0,185 Â· 35.000 = 6.475 kg/h.',
+            'Il rendimento termico effettivo risulta eta = 3600 / (0,185 Â· 42.700) = 45,6%.',
           ],
         },
       ],
@@ -352,7 +352,7 @@ export const stateExams = [
     assumptions: [
       'Gas perfetto con cp = 1,005 kJ/(kg K) e gamma = 1,4.',
       'Potenza sviluppata dai tre gruppi assunta pari a 36 MW nella condizione di riferimento.',
-      'Consumo totale calcolato alla massima richiesta di potenza dell'apparato generatore.',
+      "Consumo totale calcolato alla massima richiesta di potenza dell'apparato generatore.",
     ],
     firstPart: {
       steps: [
@@ -366,24 +366,24 @@ export const stateExams = [
         {
           title: '2. Lavori specifici di compressione ed espansione',
           body: [
-            'Il lavoro del compressore vale wc = cp · (T2 - T1) = 1,005 · (647 - 293) = 355,9 kJ/kg.',
-            'Il lavoro di turbina vale wt = cp · (T3 - T4) = 1,005 · (1323 - 599) = 727,6 kJ/kg.',
+            'Il lavoro del compressore vale wc = cp Â· (T2 - T1) = 1,005 Â· (647 - 293) = 355,9 kJ/kg.',
+            'Il lavoro di turbina vale wt = cp Â· (T3 - T4) = 1,005 Â· (1323 - 599) = 727,6 kJ/kg.',
             'Il lavoro utile specifico del ciclo e quindi wu = wt - wc = 371,6 kJ/kg.',
           ],
         },
         {
           title: '3. Rendimento globale e consumo di traversata',
           body: [
-            'Dal consumo specifico reale si ottiene eta_gl = 3600 / (0,225 · 50.000) = 32,0%.',
-            'Il tempo di percorrenza di 1.500 miglia a 22 nodi e t = 68,18 h. Il combustibile totale richiesto e m = 0,225 · 36.000 · 68,18 = 552.273 kg, cioe circa 552 t di metano equivalente.',
+            'Dal consumo specifico reale si ottiene eta_gl = 3600 / (0,225 Â· 50.000) = 32,0%.',
+            'Il tempo di percorrenza di 1.500 miglia a 22 nodi e t = 68,18 h. Il combustibile totale richiesto e m = 0,225 Â· 36.000 Â· 68,18 = 552.273 kg, cioe circa 552 t di metano equivalente.',
           ],
         },
         {
           title: '4. Calore recuperabile dai gas di scarico',
           body: [
-            'Il rapporto combustibile/aria ideale si stima da q_in = cp · (T3 - T2) = 679 kJ/kg aria, quindi f = 679 / 50.000 = 0,0136.',
+            'Il rapporto combustibile/aria ideale si stima da q_in = cp Â· (T3 - T2) = 679 kJ/kg aria, quindi f = 679 / 50.000 = 0,0136.',
             'Con una portata combustibile di 8.100 kg/h si ricava una portata aria di circa 165,6 kg/s.',
-            'Raffreddando i gas da circa 326 C a 200 C si recupera Q = m · cp · DeltaT = 165,6 · 1,005 · 126 = 20,98 MW.',
+            'Raffreddando i gas da circa 326 C a 200 C si recupera Q = m Â· cp Â· DeltaT = 165,6 Â· 1,005 Â· 126 = 20,98 MW.',
           ],
         },
       ],
@@ -433,7 +433,7 @@ export const stateExams = [
     sourcePdf: '/esami/originali/I159_ORD17.pdf',
     trace: [
       'Nave da crociera con potenza diesel complessiva di 58.000 kW.',
-      'La prima parte richiede portata massima di vapore producibile con caldaie a recupero e percentuale complessiva di utilizzazione del calore del combustibile, oltre allo schema dell'impianto.',
+      "La prima parte richiede portata massima di vapore producibile con caldaie a recupero e percentuale complessiva di utilizzazione del calore del combustibile, oltre allo schema dell'impianto.",
     ],
     assumptions: [
       'Consumo specifico bsfc = 175 g/kWh e PCI = 42.700 kJ/kg.',
@@ -445,7 +445,7 @@ export const stateExams = [
         {
           title: '1. Potenza del combustibile e rendimento del motore',
           body: [
-            'Dal consumo specifico si ricava il rendimento del motore: eta = 3600 / (0,175 · 42.700) = 48,2%.',
+            'Dal consumo specifico si ricava il rendimento del motore: eta = 3600 / (0,175 Â· 42.700) = 48,2%.',
             'La potenza termica introdotta dal combustibile e quindi Qf = 58.000 / 0,4818 = 120,4 MW.',
           ],
         },
@@ -453,7 +453,7 @@ export const stateExams = [
           title: '2. Portata massima di vapore',
           body: [
             'Assumendo recuperabile il 25% della potenza del combustibile, la potenza resa alla caldaia a recupero e Qrec = 30,1 MW.',
-            'La portata di vapore vale m_v = Qrec · 3600 / 2330 = 46,5 t/h.',
+            'La portata di vapore vale m_v = Qrec Â· 3600 / 2330 = 46,5 t/h.',
           ],
         },
         {
@@ -505,7 +505,7 @@ export const stateExams = [
     sourcePdf: '/esami/originali/M582_ORD16.pdf',
     trace: [
       'Petroliera con motore diesel da 13.500 kW.',
-      'La traccia richiede produzione oraria massima di vapore con caldaia a recupero, grado complessivo di utilizzazione del combustibile e schema semplificato dell'impianto vapore.',
+      "La traccia richiede produzione oraria massima di vapore con caldaia a recupero, grado complessivo di utilizzazione del combustibile e schema semplificato dell'impianto vapore.",
     ],
     assumptions: [
       'Consumo specifico bsfc = 180 g/kWh e PCI = 42.700 kJ/kg.',
@@ -517,7 +517,7 @@ export const stateExams = [
         {
           title: '1. Potenza del combustibile',
           body: [
-            'Dal consumo specifico si ottiene eta = 3600 / (0,180 · 42.700) = 46,8%.',
+            'Dal consumo specifico si ottiene eta = 3600 / (0,180 Â· 42.700) = 46,8%.',
             'La potenza termica immessa col combustibile vale Qf = 13.500 / 0,468 = 28,82 MW.',
           ],
         },
@@ -525,7 +525,7 @@ export const stateExams = [
           title: '2. Vapore producibile',
           body: [
             'Assumendo recuperabile il 24% della potenza del combustibile, Qrec = 6,92 MW.',
-            'La portata di vapore e m_v = 6,917 · 3600 / 2330 = 10,69 t/h.',
+            'La portata di vapore e m_v = 6,917 Â· 3600 / 2330 = 10,69 t/h.',
           ],
         },
         {
@@ -575,8 +575,8 @@ export const stateExams = [
     headline: 'Portacontainer con diesel lento sovralimentato',
     sourcePdf: '/esami/originali/M582_ORD15.pdf',
     trace: [
-      'Portacontainer da 25.000 GT, velocità 16 nodi, apparato motore a poppa. Potenza effettiva 12 MW fornita da un diesel lento 8 cilindri in linea, 110 giri/min, pme = 16,2 bar.',
-      'Richieste: caratteristiche geometriche del cilindro, velocità media del pistone, rendimento globale dato bsfc = 0,180 kg/kWh, consumo orario e consumo totale per 4.000 miglia.',
+      'Portacontainer da 25.000 GT, velocitÃ  16 nodi, apparato motore a poppa. Potenza effettiva 12 MW fornita da un diesel lento 8 cilindri in linea, 110 giri/min, pme = 16,2 bar.',
+      'Richieste: caratteristiche geometriche del cilindro, velocitÃ  media del pistone, rendimento globale dato bsfc = 0,180 kg/kWh, consumo orario e consumo totale per 4.000 miglia.',
     ],
     assumptions: [
       'Rapporto corsa/alesaggio S/D = 3,5 tipico di motore lento sovralimentato.',
@@ -587,22 +587,22 @@ export const stateExams = [
         {
           title: '1. Geometria del cilindro',
           body: [
-            'Per un due tempi Vtot = P / (pme · n) = 12·10^6 / (1,62·10^6 · 1,833) = 4,04 m3.',
+            'Per un due tempi Vtot = P / (pme Â· n) = 12Â·10^6 / (1,62Â·10^6 Â· 1,833) = 4,04 m3.',
             'Per cilindro si ha Vc = 4,04 / 8 = 0,505 m3. Con S = 3,5D si ricava D = 0,568 m e S = 1,990 m.',
           ],
         },
         {
           title: '2. Velocita media del pistone',
           body: [
-            'cm = 2 · S · n / 60 = 2 · 1,990 · 110 / 60 = 7,30 m/s.',
+            'cm = 2 Â· S Â· n / 60 = 2 Â· 1,990 Â· 110 / 60 = 7,30 m/s.',
           ],
         },
         {
           title: '3. Rendimento, consumi orari e di traversata',
           body: [
-            'Il rendimento globale e eta = 3600 / (0,180 · 42.700) = 46,8%.',
-            'Il consumo orario vale Ch = 0,180 · 12.000 = 2.160 kg/h.',
-            'Per 4.000 miglia a 16 nodi il tempo e 250 h, quindi il consumo complessivo e 2.160 · 250 = 540.000 kg, cioe 540 t.',
+            'Il rendimento globale e eta = 3600 / (0,180 Â· 42.700) = 46,8%.',
+            'Il consumo orario vale Ch = 0,180 Â· 12.000 = 2.160 kg/h.',
+            'Per 4.000 miglia a 16 nodi il tempo e 250 h, quindi il consumo complessivo e 2.160 Â· 250 = 540.000 kg, cioe 540 t.',
           ],
         },
       ],
@@ -656,7 +656,7 @@ export const examDiagramMeta = {
     title: 'Schema diesel lento con recupero vapore',
     caption: 'Dal motore principale ai servizi ausiliari: propulsione, gas di scarico, caldaia a recupero e circuito acqua-vapore.',
     highlights: [
-      'Potenza meccanica all'asse e calore residuo sullo scarico vengono letti nello stesso schema.',
+      "Potenza meccanica all'asse e calore residuo sullo scarico vengono letti nello stesso schema.",
       'Il circuito mostra il ritorno condense e la pompa alimento, utili nella parte impiantistica della traccia.',
       'Nel PDF viene esportato come diagramma tecnico insieme alla sintesi dei risultati.',
     ],
@@ -666,7 +666,7 @@ export const examDiagramMeta = {
     title: 'Propulsione COGAG con innesto su riduttore',
     caption: 'Le turbine di crociera e di boost convergono sul riduttore principale prima della linea d asse.',
     highlights: [
-      'La lettura dello schema aiuta a motivare velocità economica, media forza e massima forza.',
+      'La lettura dello schema aiuta a motivare velocitÃ  economica, media forza e massima forza.',
       'Le frizioni e il riduttore spiegano come combinare le macchine senza perdere la continuita della propulsione.',
       'Il diagramma mette in evidenza il trasferimento della potenza fino all elica.',
     ],
@@ -674,7 +674,7 @@ export const examDiagramMeta = {
   'a056-ord23': {
     type: 'cargo-pump',
     title: 'Schema idraulico delle pompe di carico in parallelo',
-    caption: 'Cisterna, due pompe centrifughe e manifold finale per dimensionare portata, prevalenza e velocità del greggio.',
+    caption: 'Cisterna, due pompe centrifughe e manifold finale per dimensionare portata, prevalenza e velocitÃ  del greggio.',
     highlights: [
       'Il parallelo delle pompe chiarisce perche la portata totale si divide in due rami uguali.',
       'Lo stesso schema e utile per collegare la traccia alla sezione impianti oleodinamici del sito.',
