@@ -2125,14 +2125,14 @@ p { margin: 0; }
 .fluid-connection-active {
   stroke: var(--fluid-active-color, #F97316);
   stroke-dasharray: 10 6;
-  animation: fluidFlow 0.8s linear infinite;
+  animation: fluidFlow var(--fluid-flow-speed, 0.8s) linear infinite;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--fluid-active-color, #F97316) 40%, transparent));
 }
 
 .fluid-connection-lowpressure {
   stroke: #38BDF8;
   stroke-dasharray: 10 6;
-  animation: fluidFlowLow 1.2s linear infinite;
+  animation: fluidFlowLow var(--fluid-flow-speed, 1.2s) linear infinite;
   filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.3));
 }
 
@@ -2144,7 +2144,7 @@ p { margin: 0; }
 .fluid-connection-mechanical-active {
   stroke: #94A3B8;
   stroke-dasharray: 8 6;
-  animation: fluidMechSpin 0.4s linear infinite;
+  animation: fluidMechSpin var(--fluid-flow-speed, 0.4s) linear infinite;
   filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.35));
 }
 

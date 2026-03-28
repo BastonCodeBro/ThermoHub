@@ -1,4 +1,5 @@
 import { getComponentDefinition } from '../data/fluidPowerCatalog';
+import { createEmptyFluidPowerSnapshot } from './fluidPowerState';
 
 const toPortKey = (nodeId, portId) => `${nodeId}:${portId}`;
 
@@ -8,6 +9,9 @@ const fromPortKey = (portKey) => {
 };
 
 const uniqueArray = (items) => [...new Set(items)];
+
+const normalizePortRef = (portRef) =>
+  typeof portRef === 'string' ? fromPortKey(portRef) : portRef;
 
 const addAdjacencyEdge = (adjacency, fromKey, toKey, meta) => {
   if (!adjacency.has(fromKey)) {
@@ -27,6 +31,11 @@ const buildNodeLookup = (nodes, domain) => {
 };
 
 const getFluidPorts = (component) => component.ports.filter((port) => port.kind === 'fluid');
+
+const getNodeFaults = (node) => [
+  ...(Array.isArray(node.faults) ? node.faults : []),
+  ...(Array.isArray(node.state?.faults) ? node.state.faults : []),
+];
 
 const getValveStateDefinition = (node, component) => {
   if (component?.simBehavior.kind !== 'valve') {
@@ -342,6 +351,172 @@ export const validateCircuit = (nodes, connections, domain) => {
   };
 };
 
+const buildSuctionPath = (adjacency, sourceNode, sourceComponent, sinkNode, sinkComponent) => {
+  const suctionPort = sourceComponent?.simBehavior?.suctionPort;
+  if (!suctionPort) {
+    return null;
+  }
+
+  return findPath(
+    adjacency,
+    getPortRefs(sinkNode, getSinkPortIds(sinkComponent)),
+    [getRef(sourceNode.instanceId, suctionPort)],
+  );
+};
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const resolveSignalForPath = (pathPorts, nodeLookup, phase = 'pressure') => {
+  const restrictions = collectRestrictionsOnPath(pathPorts, nodeLookup);
+  let pressure =
+    phase === 'pressure'
+      ? BASE_SYSTEM_PRESSURE
+      : phase === 'suction'
+        ? BASE_SYSTEM_PRESSURE * 0.12
+        : BASE_SYSTEM_PRESSURE * 0.2;
+  let flowRate = BASE_FLOW_RATE;
+  let velocityFactor = phase === 'pressure' ? 1 : phase === 'mechanical' ? 1.8 : 0.78;
+
+  for (const restriction of restrictions) {
+    if (
+      restriction.type === 'flowControl' ||
+      restriction.type === 'clogged' ||
+      restriction.type === 'wornPump'
+    ) {
+      flowRate *= restriction.flowMultiplier;
+      pressure *= 0.55 + 0.45 * restriction.flowMultiplier;
+      velocityFactor *= restriction.flowMultiplier;
+    }
+
+    if (restriction.type === 'reliefValve' || restriction.type === 'lowPrv') {
+      const crackingPressure = restriction.crackingPressure ?? 80;
+      if (pressure > crackingPressure) {
+        pressure = crackingPressure;
+        flowRate *= 0.3;
+        velocityFactor *= 0.55;
+      }
+    }
+  }
+
+  return {
+    pressure: Math.round(pressure * 10) / 10,
+    flowRate: Math.round(flowRate * 10) / 10,
+    velocityFactor: Math.round(clamp(velocityFactor, 0.12, 2.4) * 100) / 100,
+  };
+};
+
+const buildConnectionStateEntries = (
+  path,
+  phase,
+  nodeLookup,
+  flowDirection = 'forward',
+) => {
+  if (!path) {
+    return {};
+  }
+
+  const signal = resolveSignalForPath(path.ports ?? [], nodeLookup, phase);
+
+  return Object.fromEntries(
+    uniqueArray(path.connectionIds ?? []).map((connectionId) => [
+      connectionId,
+      {
+        active: true,
+        phase,
+        flowDirection,
+        flowRate: phase === 'mechanical' ? null : signal.flowRate,
+        pressureIn: phase === 'mechanical' ? null : signal.pressure,
+        pressureOut:
+          phase === 'mechanical'
+            ? null
+            : Math.round(
+                Math.max(signal.pressure - (phase === 'pressure' ? 8 : 3), 0) * 10,
+              ) / 10,
+        velocityFactor: signal.velocityFactor,
+      },
+    ]),
+  );
+};
+
+const mergeConnectionStateEntries = (...collections) => {
+  const merged = {};
+
+  for (const collection of collections) {
+    for (const [connectionId, state] of Object.entries(collection ?? {})) {
+      merged[connectionId] = {
+        ...(merged[connectionId] ?? {}),
+        ...state,
+      };
+    }
+  }
+
+  return merged;
+};
+
+const materializeConnectionStates = (connections, activeStates) =>
+  Object.fromEntries(
+    connections.map((connection) => [
+      connection.id,
+      {
+        active: false,
+        phase: connection.kind === 'mechanical' ? 'mechanical' : 'pressure',
+        flowDirection: null,
+        flowRate: null,
+        pressureIn: null,
+        pressureOut: null,
+        velocityFactor: 1,
+        ...(activeStates[connection.id] ?? {}),
+      },
+    ]),
+  );
+
+const buildMechanicalStates = (connections, nodeLookup, sourceNode) => {
+  const connectionStates = {};
+  const activeNodeIds = [];
+
+  for (const connection of connections) {
+    if (connection.kind !== 'mechanical') {
+      continue;
+    }
+
+    const fromNode = nodeLookup.get(connection.from.nodeId);
+    const toNode = nodeLookup.get(connection.to.nodeId);
+    const fromComponent = fromNode ? getComponentDefinition(fromNode.componentId) : null;
+    const toComponent = toNode ? getComponentDefinition(toNode.componentId) : null;
+    const sourceOnFromSide = fromNode?.instanceId === sourceNode.instanceId;
+    const sourceOnToSide = toNode?.instanceId === sourceNode.instanceId;
+    const driverOnFromSide = fromComponent?.simBehavior?.kind === 'driver';
+    const driverOnToSide = toComponent?.simBehavior?.kind === 'driver';
+
+    if (
+      (sourceOnFromSide && driverOnToSide) ||
+      (sourceOnToSide && driverOnFromSide)
+    ) {
+      connectionStates[connection.id] = {
+        active: true,
+        phase: 'mechanical',
+        flowDirection: null,
+        flowRate: null,
+        pressureIn: null,
+        pressureOut: null,
+        velocityFactor: 1.8,
+      };
+      activeNodeIds.push(connection.from.nodeId, connection.to.nodeId);
+    }
+  }
+
+  return {
+    connectionStates,
+    activeNodeIds: uniqueArray(activeNodeIds),
+  };
+};
+
+const buildStoppedSnapshot = (warnings, verdict = 'incomplete') => ({
+  ...createEmptyFluidPowerSnapshot(),
+  warnings,
+  verdict,
+});
+
 const buildExhaustPathFromActuator = (adjacency, actuatorNode, actuatorComponent, valveNode, valveComponent, routeInfo, sinkNode, sinkComponent) => {
   if (!routeInfo.exhaustWorkPort || !routeInfo.activeReturnPort) {
     return null;
@@ -375,18 +550,7 @@ const buildExhaustPathFromActuator = (adjacency, actuatorNode, actuatorComponent
 export const buildSimulationFlow = (nodes, connections, domain) => {
   const validation = validateCircuit(nodes, connections, domain);
   if (!validation.valid) {
-    return {
-      valid: false,
-      isRunning: false,
-      warnings: validation.warnings,
-      activePorts: [],
-      activeConnections: [],
-      activeNodes: [],
-      actuatorAction: null,
-      readings: {},
-      actuatorTiming: null,
-      summary: null,
-    };
+    return buildStoppedSnapshot(validation.warnings);
   }
 
   const nodeLookup = new Map(nodes.map((node) => [node.instanceId, node]));
@@ -400,10 +564,18 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
   const actuatorComponent = getComponentDefinition(actuatorNode.componentId);
   const sinkComponent = getComponentDefinition(sinkNode.componentId);
   const routeInfo = getValveRouteInfo(valveNode, valveComponent);
+  const { adjacency } = buildAdjacency(nodes, connections, domain, 'fluid');
+  const suctionPath = buildSuctionPath(
+    adjacency,
+    sourceNode,
+    sourceComponent,
+    sinkNode,
+    sinkComponent,
+  );
+  const mechanicalState = buildMechanicalStates(connections, nodeLookup, sourceNode);
 
   if (!routeInfo?.activeWorkPort) {
     if (routeInfo?.exhaustWorkPort && actuatorComponent.simBehavior.actuatorType === 'single') {
-      const { adjacency } = buildAdjacency(nodes, connections, domain, 'fluid');
       const exhaustPath = buildExhaustPathFromActuator(
         adjacency,
         actuatorNode,
@@ -420,24 +592,52 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
         const allActivePorts = uniqueArray(
           exhaustPath.ports.map((port) => toPortKey(port.nodeId, port.portId)),
         );
-        const nodeLookupForReadings = new Map(nodes.map((n) => [n.instanceId, n]));
+        const activeConnectionIds = uniqueArray([
+          ...exhaustPath.connectionIds,
+          ...(suctionPath?.connectionIds ?? []),
+          ...Object.keys(mechanicalState.connectionStates),
+        ]);
+        const measurements = computeReadings(
+          allActivePorts,
+          activeConnectionIds,
+          nodes,
+          nodeLookup,
+        );
 
         return {
+          ...createEmptyFluidPowerSnapshot(),
           valid: true,
+          verdict: 'valid',
           isRunning: true,
           warnings: [`Schema avviato: ${action} dell'utilizzatore (scarico attraverso il distributore).`],
           activePorts: allActivePorts,
-          activeConnections: uniqueArray(exhaustPath.connectionIds),
+          activeConnections: activeConnectionIds,
           activeNodes: uniqueArray([
             ...exhaustPath.nodeIds,
+            ...(suctionPath?.nodeIds ?? []),
             sourceNode.instanceId,
             valveNode.instanceId,
             actuatorNode.instanceId,
             sinkNode.instanceId,
+            ...mechanicalState.activeNodeIds,
           ]),
           actuatorAction: action,
-          readings: computeReadings(allActivePorts, uniqueArray(exhaustPath.connectionIds), nodes, nodeLookupForReadings),
-          actuatorTiming: computeActuatorTiming(actuatorNode, actuatorComponent, allActivePorts, nodeLookupForReadings),
+          connectionStates: materializeConnectionStates(
+            connections,
+            mergeConnectionStateEntries(
+              buildConnectionStateEntries(exhaustPath, 'return', nodeLookup, 'reverse'),
+              buildConnectionStateEntries(suctionPath, 'suction', nodeLookup, 'forward'),
+              mechanicalState.connectionStates,
+            ),
+          ),
+          measurements,
+          readings: measurements,
+          actuatorTiming: computeActuatorTiming(
+            actuatorNode,
+            actuatorComponent,
+            allActivePorts,
+            nodeLookup,
+          ),
           summary: {
             sourceLabel: sourceComponent.label,
             valveLabel: valveComponent.label,
@@ -446,32 +646,14 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
         };
       }
 
-      return {
-        valid: false,
-        isRunning: false,
-        warnings: ['Il distributore e in riposo: la pompa e bloccata. La valvola limitatrice (PRV) devia la portata al serbatoio. Collega il percorso di scarico A->R al serbatoio per osservare il ritorno dell\'utilizzatore.'],
-        activePorts: [],
-        activeConnections: [],
-        activeNodes: [],
-        actuatorAction: null,
-        readings: {},
-        actuatorTiming: null,
-        summary: null,
-      };
+      return buildStoppedSnapshot([
+        'Il distributore e in riposo: la pompa e bloccata. La valvola limitatrice (PRV) devia la portata al serbatoio. Collega il percorso di scarico A->R al serbatoio per osservare il ritorno dell\'utilizzatore.',
+      ], 'faulted');
     }
 
-    return {
-      valid: false,
-      isRunning: false,
-      warnings: ['Metti il distributore in posizione di alimentazione prima di avviare lo schema.'],
-      activePorts: [],
-      activeConnections: [],
-      activeNodes: [],
-      actuatorAction: null,
-      readings: {},
-      actuatorTiming: null,
-      summary: null,
-    };
+    return buildStoppedSnapshot([
+      'Metti il distributore in posizione di alimentazione prima di avviare lo schema.',
+    ]);
   }
 
   const activeWorkPath =
@@ -480,18 +662,9 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
     )?.path ?? null;
 
   if (!activeWorkPath) {
-    return {
-      valid: false,
-      isRunning: false,
-      warnings: ["La posizione attuale del distributore non raggiunge l'utilizzatore selezionato."],
-      activePorts: [],
-      activeConnections: [],
-      activeNodes: [],
-      actuatorAction: null,
-      readings: {},
-      actuatorTiming: null,
-      summary: null,
-    };
+    return buildStoppedSnapshot([
+      "La posizione attuale del distributore non raggiunge l'utilizzatore selezionato.",
+    ]);
   }
 
   const activePortKeys = [
@@ -513,6 +686,7 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
     actuatorNode.instanceId,
     sinkNode.instanceId,
   ];
+  let passiveExhaustPath = null;
 
   if (actuatorComponent.simBehavior.actuatorType === 'double' && routeInfo.exhaustWorkPort) {
     const passiveLink = validation.details.workConnectivity.find(
@@ -520,6 +694,7 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
     );
 
     if (passiveLink) {
+      passiveExhaustPath = passiveLink.path;
       activePortKeys.push(
         ...passiveLink.path.ports.map((port) => toPortKey(port.nodeId, port.portId)),
       );
@@ -540,33 +715,53 @@ export const buildSimulationFlow = (nodes, connections, domain) => {
           : 'ritrazione';
 
   const allActivePorts = uniqueArray(activePortKeys);
-  const allActiveConnections = uniqueArray(activeConnectionIds);
-  const allActiveNodes = uniqueArray(activeNodeIds);
-  const nodeLookupForReadings = new Map(nodes.map((n) => [n.instanceId, n]));
+  const pathConnectionStates = mergeConnectionStateEntries(
+    buildConnectionStateEntries(validation.details.paths.supplyPath, 'pressure', nodeLookup, 'forward'),
+    buildConnectionStateEntries(activeWorkPath, 'pressure', nodeLookup, 'forward'),
+    buildConnectionStateEntries(validation.details.paths.returnPath, 'return', nodeLookup, 'forward'),
+    buildConnectionStateEntries(passiveExhaustPath, 'return', nodeLookup, 'reverse'),
+    buildConnectionStateEntries(suctionPath, 'suction', nodeLookup, 'forward'),
+    mechanicalState.connectionStates,
+  );
 
-  const readings = computeReadings(
+  const allActiveConnections = uniqueArray([
+    ...activeConnectionIds,
+    ...(suctionPath?.connectionIds ?? []),
+    ...Object.keys(mechanicalState.connectionStates),
+  ]);
+  const allActiveNodes = uniqueArray([
+    ...activeNodeIds,
+    ...(suctionPath?.nodeIds ?? []),
+    ...mechanicalState.activeNodeIds,
+  ]);
+
+  const measurements = computeReadings(
     allActivePorts,
     allActiveConnections,
     nodes,
-    nodeLookupForReadings,
+    nodeLookup,
   );
 
   const actuatorTiming = computeActuatorTiming(
     actuatorNode,
     actuatorComponent,
     allActivePorts,
-    nodeLookupForReadings,
+    nodeLookup,
   );
 
   return {
+    ...createEmptyFluidPowerSnapshot(),
     valid: true,
+    verdict: 'valid',
     isRunning: true,
     warnings: [`Schema avviato: ${action} dell'utilizzatore.`],
     activePorts: allActivePorts,
     activeConnections: allActiveConnections,
     activeNodes: allActiveNodes,
     actuatorAction: action,
-    readings,
+    connectionStates: materializeConnectionStates(connections, pathConnectionStates),
+    measurements,
+    readings: measurements,
     actuatorTiming,
     summary: {
       sourceLabel: sourceComponent.label,
@@ -611,7 +806,8 @@ const collectRestrictionsOnPath = (pathPorts, nodeLookup) => {
   const restrictions = [];
 
   for (const portRef of pathPorts) {
-    const node = nodeLookup.get(portRef.nodeId);
+    const normalizedRef = normalizePortRef(portRef);
+    const node = nodeLookup.get(normalizedRef.nodeId);
     if (!node) {
       continue;
     }
@@ -639,17 +835,15 @@ const collectRestrictionsOnPath = (pathPorts, nodeLookup) => {
       });
     }
 
-    if (Array.isArray(node.state?.faults)) {
-      for (const fault of node.state.faults) {
-        if (fault.type === 'clogged-filter') {
-          restrictions.push({ nodeId: node.instanceId, type: 'clogged', flowMultiplier: 0.2 });
-        }
-        if (fault.type === 'worn-pump') {
-          restrictions.push({ nodeId: node.instanceId, type: 'wornPump', flowMultiplier: 0.4 });
-        }
-        if (fault.type === 'low-prv') {
-          restrictions.push({ nodeId: node.instanceId, type: 'lowPrv', crackingPressure: 20 });
-        }
+    for (const fault of getNodeFaults(node)) {
+      if (fault.type === 'clogged-filter') {
+        restrictions.push({ nodeId: node.instanceId, type: 'clogged', flowMultiplier: 0.2 });
+      }
+      if (fault.type === 'worn-pump') {
+        restrictions.push({ nodeId: node.instanceId, type: 'wornPump', flowMultiplier: 0.4 });
+      }
+      if (fault.type === 'low-prv') {
+        restrictions.push({ nodeId: node.instanceId, type: 'lowPrv', crackingPressure: 20 });
       }
     }
   }

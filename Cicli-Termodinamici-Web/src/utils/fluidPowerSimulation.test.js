@@ -97,4 +97,71 @@ describe('fluidPowerSimulation', () => {
     expect(result.actuatorAction).toBe('estensione');
     expect(result.activeConnections).toEqual(expect.arrayContaining(['c1', 'c2', 'c3']));
   });
+
+  test('emits typed connection states for pressure and return branches', () => {
+    const toggledNodes = applyValveState(baseNodes, 'valve-1');
+    const result = buildSimulationFlow(toggledNodes, baseConnections, 'hydraulic');
+
+    expect(result.connectionStates.c1).toMatchObject({
+      active: true,
+      phase: 'pressure',
+    });
+    expect(result.connectionStates.c2).toMatchObject({
+      active: true,
+      phase: 'pressure',
+    });
+    expect(result.connectionStates.c3).toMatchObject({
+      active: true,
+      phase: 'return',
+    });
+    expect(result.measurements).toEqual(result.readings);
+  });
+
+  test('activates shaft and suction branches when they are present in the circuit', () => {
+    const nodes = [
+      ...baseNodes,
+      {
+        instanceId: 'driver-1',
+        componentId: 'hydraulic-prime-mover',
+        domain: 'hydraulic',
+        x: 0,
+        y: 0,
+        rotation: 0,
+        label: 'Motore primo 1',
+        state: {},
+      },
+    ];
+    const connections = [
+      ...baseConnections,
+      {
+        id: 'c4',
+        domain: 'hydraulic',
+        kind: 'fluid',
+        from: { nodeId: 'tank-1', portId: 'OUT' },
+        to: { nodeId: 'pump-1', portId: 'S' },
+        pathPoints: [],
+      },
+      {
+        id: 'c5',
+        domain: 'hydraulic',
+        kind: 'mechanical',
+        from: { nodeId: 'driver-1', portId: 'shaft' },
+        to: { nodeId: 'pump-1', portId: 'drive' },
+        pathPoints: [],
+      },
+    ];
+
+    const toggledNodes = applyValveState(nodes, 'valve-1');
+    const result = buildSimulationFlow(toggledNodes, connections, 'hydraulic');
+
+    expect(result.connectionStates.c4).toMatchObject({
+      active: true,
+      phase: 'suction',
+    });
+    expect(result.connectionStates.c5).toMatchObject({
+      active: true,
+      phase: 'mechanical',
+    });
+    expect(result.activeNodes).toContain('driver-1');
+  });
 });

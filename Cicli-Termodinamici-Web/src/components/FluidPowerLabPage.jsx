@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   Activity,
   ChevronDown,
@@ -28,12 +28,22 @@ import {
 import {
   buildBillOfMaterials,
   createDraftNodePayload,
-  createProjectMeta,
   FLUID_POWER_PROJECT_STORAGE_KEY,
   hydrateProjectDocument,
   serializeProjectDocument,
-  touchProjectMeta,
 } from '../utils/fluidPowerProject';
+import {
+  createFluidPowerReducerState,
+  fluidPowerReducer,
+} from '../utils/fluidPowerReducer';
+import {
+  selectActiveDomain,
+  selectActiveWorkspace,
+  selectConnectionVisualStates,
+  selectIsStudentMode,
+  selectMeasurementMap,
+} from '../utils/fluidPowerSelectors';
+import { createFluidPowerWorkspace } from '../utils/fluidPowerState';
 
 const GRID_SIZE = 24;
 const CANVAS_WIDTH = 1160;
@@ -49,8 +59,8 @@ const DEFAULT_EXPANDED_GROUPS = [
 
 const CATEGORY_COPY = {
   alimentazione: 'Sorgenti, ritorni e unità di servizio per alimentare correttamente il circuito.',
-  'valvole-distributrici': 'Organi di comando per indirizzare il flusso e cambiare il moto dell'attuatore.',
-  utilizzatori: 'Cilindri e motori che trasformano l'energia del fluido in lavoro utile.',
+  'valvole-distributrici': "Organi di comando per indirizzare il flusso e cambiare il moto dell'attuatore.",
+  utilizzatori: "Cilindri e motori che trasformano l'energia del fluido in lavoro utile.",
   ausiliari: 'Elementi di regolazione, protezione e logica per completare lo schema.',
   'strumentazione-e-comandi': 'Indicatori e comandi simbolici utili a leggere la funzione del circuito.',
   'simbologia-base': 'Segni grafici di supporto per ripassare la simbologia ISO del fluid power.',
@@ -96,29 +106,7 @@ const createExpandedGroupState = () =>
     ]),
   );
 
-const createWorkspace = () => ({
-  nodes: [],
-  connections: [],
-  nets: [],
-  pendingPort: null,
-  selectedEntity: null,
-  lastRun: null,
-  baselineRun: null,
-  scenarioId: 'startup-sequence',
-  timelineStep: 0,
-  snapshot: {
-    isRunning: false,
-    activePorts: [],
-    activeConnections: [],
-    activeNodes: [],
-    warnings: [],
-    actuatorAction: null,
-    readings: {},
-    actuatorTiming: null,
-    summary: null,
-  },
-  message: 'Trascina i componenti nel canvas e collega le porte per costruire il circuito.',
-});
+const createWorkspace = () => createFluidPowerWorkspace();
 
 const snap = (value) => Math.max(16, Math.round(value / GRID_SIZE) * GRID_SIZE);
 
@@ -540,7 +528,7 @@ const buildDidacticFeedback = (workspace, validation, domainMeta) => {
       verdict: 'Incompleto',
       tone: 'info',
       summary: 'Lo schema è pronto, ma non è ancora stato avviato nella configurazione corrente.',
-      nextSuggestion: 'Avvia lo schema o commuta il distributore se vuoi vedere il movimento dell'attuatore.',
+      nextSuggestion: "Avvia lo schema o commuta il distributore se vuoi vedere il movimento dell'attuatore.",
       flowExplanation: 'Il circuito contiene già la catena minima: ora va verificata la direzione del flusso in simulazione.',
     };
   }
@@ -637,25 +625,28 @@ const buildInspector = (workspace) => {
 };
 
 const FluidPowerLabPage = () => {
-  const [projectMeta, setProjectMeta] = useState(() => createProjectMeta());
-  const [domain, setDomain] = useState('hydraulic');
+  const [fluidState, dispatch] = useReducer(fluidPowerReducer, undefined, createFluidPowerReducerState);
   const [search, setSearch] = useState('');
   const [storageStatus, setStorageStatus] = useState('Autosave locale pronto.');
-  const [workspaces, setWorkspaces] = useState({
-    hydraulic: createWorkspace(),
-    pneumatic: createWorkspace(),
-  });
   const [expandedGroups, setExpandedGroups] = useState(createExpandedGroupState);
   const [draggingNode, setDraggingNode] = useState(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const canvasRef = useRef(null);
   const importInputRef = useRef(null);
 
-  const workspace = workspaces[domain];
+  const projectMeta = fluidState.projectMeta;
+  const workspaces = fluidState.workspaces;
+  const domain = selectActiveDomain(fluidState);
+  const workspace = selectActiveWorkspace(fluidState);
   const domainMeta = getDomainMeta(domain);
   const groups = useMemo(() => paletteGroups(domain, search), [domain, search]);
   const hasSearch = search.trim().length > 0;
-  const isStudentMode = projectMeta.mode !== 'engineering';
+  const isStudentMode = selectIsStudentMode(fluidState);
+  const measurementMap = useMemo(() => selectMeasurementMap(fluidState), [fluidState]);
+  const connectionVisualStates = useMemo(
+    () => selectConnectionVisualStates(fluidState),
+    [fluidState],
+  );
 
   const refreshPaths = useCallback((nodes, connections) =>
     connections.map((connection) => {
@@ -715,10 +706,13 @@ const FluidPowerLabPage = () => {
 
       const hydrated = hydrateProjectDocument(rawDocument, createWorkspace);
 
-      setProjectMeta(hydrated.meta);
-      setWorkspaces({
-        hydraulic: normalizeWorkspace(hydrated.workspaces.hydraulic),
-        pneumatic: normalizeWorkspace(hydrated.workspaces.pneumatic),
+      dispatch({
+        type: 'HYDRATE_PROJECT',
+        projectMeta: hydrated.meta,
+        workspaces: {
+          hydraulic: normalizeWorkspace(hydrated.workspaces.hydraulic),
+          pneumatic: normalizeWorkspace(hydrated.workspaces.pneumatic),
+        },
       });
       setStorageStatus('Progetto locale ripristinato.');
     } catch {
@@ -761,11 +755,11 @@ const FluidPowerLabPage = () => {
   const bomItems = useMemo(() => buildBillOfMaterials(workspace), [workspace]);
 
   const updateWorkspace = useCallback((updater) => {
-    setWorkspaces((current) => ({
-      ...current,
-      [domain]: updater(current[domain]),
-    }));
-  }, [domain]);
+    dispatch({
+      type: 'UPDATE_ACTIVE_WORKSPACE',
+      updater,
+    });
+  }, []);
 
   const addNode = (componentId, dropPosition) => {
     const component = getComponentDefinition(componentId);
@@ -1089,10 +1083,10 @@ const FluidPowerLabPage = () => {
       return;
     }
 
-    setProjectMeta((current) => touchProjectMeta({
-      ...current,
+    dispatch({
+      type: 'SET_PROJECT_MODE',
       mode,
-    }));
+    });
 
     updateWorkspace((current) => ({
       ...current,
@@ -1138,10 +1132,13 @@ const FluidPowerLabPage = () => {
       const rawDocument = await file.text();
       const hydrated = hydrateProjectDocument(rawDocument, createWorkspace);
 
-      setProjectMeta(hydrated.meta);
-      setWorkspaces({
-        hydraulic: normalizeWorkspace(hydrated.workspaces.hydraulic),
-        pneumatic: normalizeWorkspace(hydrated.workspaces.pneumatic),
+      dispatch({
+        type: 'HYDRATE_PROJECT',
+        projectMeta: hydrated.meta,
+        workspaces: {
+          hydraulic: normalizeWorkspace(hydrated.workspaces.hydraulic),
+          pneumatic: normalizeWorkspace(hydrated.workspaces.pneumatic),
+        },
       });
       setStorageStatus('Progetto importato dal file JSON.');
     } catch {
@@ -1193,7 +1190,11 @@ const FluidPowerLabPage = () => {
                 key={item.id}
                 className={`fluid-domain-tab ${domain === item.id ? 'fluid-domain-tab-active' : ''}`}
                 style={domain === item.id ? { borderColor: item.accent, color: item.accent } : {}}
-                onClick={() => setDomain(item.id)}
+                    onClick={() =>
+                      dispatch({
+                        type: 'SET_ACTIVE_DOMAIN',
+                        domain: item.id,
+                      })}
               >
                 {item.label}
               </button>
@@ -1403,20 +1404,34 @@ const FluidPowerLabPage = () => {
               <div className="fluid-canvas-stage">
                 <svg className="fluid-connections-layer" viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}>
                   {workspace.connections.map((connection) => {
-                    const isActive = workspace.snapshot.activeConnections.includes(connection.id);
-                    const isMechanical = connection.kind === 'mechanical';
+                    const visualState = connectionVisualStates[connection.id] ?? {
+                      active: false,
+                      phase: connection.kind === 'mechanical' ? 'mechanical' : 'pressure',
+                      velocityFactor: 1,
+                    };
+                    const isActive = Boolean(visualState.active);
+                    const isMechanical = visualState.phase === 'mechanical' || connection.kind === 'mechanical';
+                    const isLowPressure =
+                      visualState.phase === 'return' || visualState.phase === 'suction';
                     const isSelected =
                       workspace.selectedEntity?.type === 'connection' &&
                       workspace.selectedEntity.id === connection.id;
                     const midArrow = isActive && !isMechanical
                       ? computeMidArrow(connection.pathPoints, 6)
                       : null;
+                    const animationDuration = isMechanical
+                      ? Math.max(0.24, 0.42 / Math.max(visualState.velocityFactor ?? 1, 0.2))
+                      : isLowPressure
+                        ? Math.max(0.45, 1.1 / Math.max(visualState.velocityFactor ?? 1, 0.2))
+                        : Math.max(0.3, 0.8 / Math.max(visualState.velocityFactor ?? 1, 0.2));
+                    const arrowFill = isLowPressure ? '#38BDF8' : domainMeta.activeColor;
 
                     return (
                       <g key={connection.id}>
                         <path
                           d={pointsToPath(connection.pathPoints)}
-                          className={`fluid-connection ${isActive ? 'fluid-connection-active' : ''} ${isMechanical ? 'fluid-connection-mechanical' : ''} ${isSelected ? 'fluid-connection-selected' : ''}`}
+                          className={`fluid-connection ${isActive ? 'fluid-connection-active' : ''} ${isLowPressure ? 'fluid-connection-lowpressure' : ''} ${isMechanical ? 'fluid-connection-mechanical' : ''} ${isMechanical && isActive ? 'fluid-connection-mechanical-active' : ''} ${isSelected ? 'fluid-connection-selected' : ''}`}
+                          style={{ '--fluid-flow-speed': `${animationDuration}s` }}
                           onClick={() =>
                             updateWorkspace((current) => ({
                               ...current,
@@ -1427,7 +1442,7 @@ const FluidPowerLabPage = () => {
                         {midArrow && (
                           <polygon
                             points={midArrow}
-                            fill={domainMeta.activeColor}
+                            fill={arrowFill}
                             opacity="0.9"
                           />
                         )}
@@ -1451,7 +1466,7 @@ const FluidPowerLabPage = () => {
                     motionState,
                     workspace.snapshot.isRunning && isActive,
                   );
-                  const reading = workspace.snapshot.readings?.[node.instanceId] ?? null;
+                  const reading = measurementMap[node.instanceId] ?? null;
                   const isInstrument = component.symbol === 'instrument';
                   const isFlowControl = component.simBehavior.kind === 'flowControl';
                   const flowPct = isFlowControl

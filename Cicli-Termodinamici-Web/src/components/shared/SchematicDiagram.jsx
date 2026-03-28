@@ -12,7 +12,6 @@ const COLORS = {
 };
 
 const BOX_FILL = 'rgba(8, 15, 28, 0.96)';
-const BOX_BORDER = 'rgba(255, 255, 255, 0.1)';
 const BADGE_FILL = '#1E1B4B';
 const BADGE_STROKE = '#A78BFA';
 const DOT_FILL = '#A78BFA';
@@ -118,7 +117,7 @@ const reheatRankineLoop = () => {
       { d: linePath(p5, p6), color: COLORS.work },
       { d: linePath(p6, p1), color: COLORS.return },
     ],
-    markers: [p1, p2, p5, p3, p4, p6],
+    markers: [p1, p2, p3, p4, p5, p6],
   };
 };
 
@@ -138,7 +137,7 @@ const regenerativeBraytonLoop = () => {
       { title: 'Compressore', kind: 'compressor', x: 120, y: 240, w: 154, h: 62 },
       { title: 'Rigeneratore', note: 'Doppio passaggio', kind: 'regenerator', x: 320, y: 240, w: 176, h: 112 },
       { title: 'Combustore', kind: 'heater', x: 440, y: 160, w: 168, h: 62 },
-      { title: 'Turbina', kind: 'turbine', x: 560, y: 240, w: 154, h: 62 },
+      { title: 'Turbina', kind: 'turbine', generator: true, x: 560, y: 240, w: 154, h: 62 },
       { title: 'Scarico', kind: 'generic', x: 190, y: 320, w: 126, h: 54 },
     ],
     pipes: [
@@ -149,7 +148,7 @@ const regenerativeBraytonLoop = () => {
       { d: linePath(p4, p6), color: '#F59E0B' },
       { d: linePath(p6, p1), color: COLORS.exhaust },
     ],
-    markers: [p1, p2, p3, p4, p5, p6],
+    markers: [p1, p2, p5, p3, p4, p6],
   };
 };
 
@@ -168,10 +167,10 @@ const combinedLoop = () => {
     components: [
       { title: 'Compressore', kind: 'compressor', x: 170, y: 130, w: 156, h: 62 },
       { title: 'Combustore', kind: 'heater', x: 350, y: 130, w: 164, h: 62 },
-      { title: 'Turbina gas', kind: 'turbine', x: 550, y: 130, w: 160, h: 62 },
+      { title: 'Turbina gas', kind: 'turbine', generator: true, x: 550, y: 130, w: 160, h: 62 },
       { title: 'HRSG', note: 'Recupero gas-vapore', kind: 'regenerator', x: 360, y: 245, w: 192, h: 118 },
       { title: 'Pompa', kind: 'pump', x: 170, y: 420, w: 142, h: 60 },
-      { title: 'Turbina vapore', kind: 'turbine', x: 550, y: 360, w: 180, h: 62 },
+      { title: 'Turbina vapore', kind: 'turbine', generator: true, x: 550, y: 360, w: 180, h: 62 },
       { title: 'Condensatore', kind: 'cooler', x: 360, y: 450, w: 196, h: 62 },
     ],
     pipes: [
@@ -250,7 +249,7 @@ const getLayout = (type) => {
         subtitle: 'Compressore, camera di combustione, turbina e scarico con stati leggibili sul circuito.',
         left: { title: 'Compressore', kind: 'compressor' },
         top: { title: 'Combustore', kind: 'heater' },
-        right: { title: 'Turbina', kind: 'turbine' },
+        right: { title: 'Turbina', kind: 'turbine', generator: true },
         bottom: { title: 'Scarico', kind: 'generic' },
         colors: { left: COLORS.cold, top: COLORS.hot, right: COLORS.work, bottom: COLORS.exhaust },
       });
@@ -262,7 +261,7 @@ const getLayout = (type) => {
         subtitle: 'Pompa, caldaia, turbina e condensatore con numerazione coerente degli stati.',
         left: { title: 'Pompa', kind: 'pump' },
         top: { title: 'Caldaia', kind: 'heater' },
-        right: { title: 'Turbina', kind: 'turbine' },
+        right: { title: 'Turbina', kind: 'turbine', generator: true },
         bottom: { title: 'Condensatore', kind: 'cooler' },
         colors: { left: COLORS.cold, top: COLORS.hot, right: COLORS.work, bottom: COLORS.return },
       });
@@ -293,101 +292,184 @@ const getLayout = (type) => {
   }
 };
 
-const renderIcon = (kind, color) => {
+const renderSymbol = (kind, color) => {
   switch (kind) {
     case 'pump':
       return (
-        <g transform="translate(-1 -1)">
-          <circle cx="0" cy="0" r="11" fill="none" stroke={color} strokeWidth="2" />
-          <path d="M -5 6 L 6 0 L -5 -6 Z" fill={color} />
+        <g>
+          <path d="M -34 0 H -20" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 20 0 H 34" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <circle cx="0" cy="0" r="20" fill={BOX_FILL} stroke={color} strokeWidth="2.6" />
+          <path d="M -8 10 L 9 0 L -8 -10 Z" fill={color} />
         </g>
       );
     case 'compressor':
-      return <path d="M -10 -9 L 7 -5 L 7 5 L -10 9 Z" fill="none" stroke={color} strokeWidth="2" />;
+      return (
+        <g>
+          <path d="M -34 0 H -18" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 14 0 H 30" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M -18 -20 L 14 -12 L 14 12 L -18 20 Z" fill={BOX_FILL} stroke={color} strokeWidth="2.6" />
+          <path d="M -12 0 H 6" stroke={color} strokeWidth="2" />
+        </g>
+      );
     case 'turbine':
-      return <path d="M -7 -9 L 10 -5 L 10 5 L -7 9 Z" fill="none" stroke={color} strokeWidth="2" />;
+      return (
+        <g>
+          <path d="M -30 0 H -12" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 18 0 H 34" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M -12 -20 L 18 -12 L 18 12 L -12 20 Z" fill={BOX_FILL} stroke={color} strokeWidth="2.6" />
+          <path d="M -4 0 H 10" stroke={color} strokeWidth="2" />
+        </g>
+      );
     case 'valve':
-      return <path d="M 0 -10 L 10 0 L 0 10 L -10 0 Z" fill="none" stroke={color} strokeWidth="2" />;
+      return (
+        <g>
+          <path d="M -34 0 H -18" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 18 0 H 34" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 0 -18 L 18 0 L 0 18 L -18 0 Z" fill={BOX_FILL} stroke={color} strokeWidth="2.6" />
+          <path d="M -10 0 H 10" stroke={color} strokeWidth="2" />
+          <path d="M 0 -28 V -18" stroke={color} strokeWidth="2" strokeLinecap="round" />
+        </g>
+      );
     case 'heater':
       return (
         <g>
-          <rect x="-12" y="-8" width="24" height="16" rx="4" fill="none" stroke={color} strokeWidth="2" />
-          <path d="M -8 0 C -6 -6 -2 -6 0 0 S 6 6 8 0" fill="none" stroke={color} strokeWidth="2" />
+          <path d="M -48 0 H -34" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 34 0 H 48" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <rect x="-34" y="-20" width="68" height="40" rx="8" fill={BOX_FILL} stroke={color} strokeWidth="2.6" />
+          <path d="M -24 0 C -20 -10 -12 -10 -8 0 S 4 10 8 0 S 20 -10 24 0" fill="none" stroke={color} strokeWidth="2.4" />
+          <path d="M 0 -42 V -24" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M -6 -32 L 0 -42 L 6 -32" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
         </g>
       );
     case 'cooler':
       return (
         <g>
-          <rect x="-12" y="-8" width="24" height="16" rx="4" fill="none" stroke={color} strokeWidth="2" />
-          <path d="M -8 0 C -6 6 -2 6 0 0 S 6 -6 8 0" fill="none" stroke={color} strokeWidth="2" />
+          <path d="M -48 0 H -34" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 34 0 H 48" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+          <rect x="-34" y="-20" width="68" height="40" rx="8" fill={BOX_FILL} stroke={color} strokeWidth="2.6" />
+          <path d="M -24 0 C -20 10 -12 10 -8 0 S 4 -10 8 0 S 20 10 24 0" fill="none" stroke={color} strokeWidth="2.4" />
+          <path d="M 0 24 V 42" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M -6 34 L 0 42 L 6 34" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
         </g>
       );
     case 'regenerator':
       return (
         <g>
-          <rect x="-13" y="-12" width="26" height="24" rx="5" fill="none" stroke={color} strokeWidth="2" />
-          <path d="M -9 -3 C -5 -8 -2 -8 1 -3 S 7 2 10 -3" fill="none" stroke={color} strokeWidth="1.8" />
-          <path d="M -9 5 C -5 0 -2 0 1 5 S 7 10 10 5" fill="none" stroke={color} strokeWidth="1.8" />
+          <path d="M -56 -10 H -42" stroke={COLORS.hot} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 42 -10 H 56" stroke={COLORS.hot} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M -56 12 H -42" stroke={COLORS.cold} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M 42 12 H 56" stroke={COLORS.cold} strokeWidth="2.4" strokeLinecap="round" />
+          <rect x="-42" y="-30" width="84" height="60" rx="12" fill={BOX_FILL} stroke={color} strokeWidth="2.6" />
+          <path d="M -30 -10 C -22 -20 -12 -20 -6 -10 S 8 0 14 -10 S 26 -20 30 -10" fill="none" stroke={color} strokeWidth="2.2" />
+          <path d="M -30 12 C -22 2 -12 2 -6 12 S 8 22 14 12 S 26 2 30 12" fill="none" stroke={color} strokeWidth="2.2" />
+          <path d="M -6 -42 V -30" stroke={COLORS.hot} strokeWidth="2" strokeLinecap="round" />
+          <path d="M -11 -34 L -6 -42 L -1 -34" fill="none" stroke={COLORS.hot} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M 6 30 V 42" stroke={COLORS.cold} strokeWidth="2" strokeLinecap="round" />
+          <path d="M 1 34 L 6 42 L 11 34" fill="none" stroke={COLORS.cold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </g>
       );
     default:
       return (
         <g>
-          <path d="M -10 -6 H 10" stroke={color} strokeWidth="2" />
-          <path d="M -10 0 H 10" stroke={color} strokeWidth="2" />
-          <path d="M -10 6 H 10" stroke={color} strokeWidth="2" />
+          <path d="M -46 0 H -30" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M 30 0 H 46" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+          <rect x="-30" y="-16" width="60" height="32" rx="10" fill={BOX_FILL} stroke={color} strokeWidth="2.4" />
+          <path d="M -16 -6 H 16" stroke={color} strokeWidth="2" />
+          <path d="M -16 0 H 16" stroke={color} strokeWidth="2" />
+          <path d="M -16 6 H 16" stroke={color} strokeWidth="2" />
         </g>
       );
   }
+};
+
+const renderGenerator = (component) => {
+  if (!component.generator) return null;
+
+  const side = component.generatorSide ?? 'right';
+  const shaftLength = 20;
+  const symbolHalfWidth = component.kind === 'turbine' ? 18 : 20;
+  const shaftStart = side === 'right' ? component.x + symbolHalfWidth : component.x - symbolHalfWidth;
+  const shaftEnd = side === 'right' ? shaftStart + shaftLength : shaftStart - shaftLength;
+  const generatorX = side === 'right' ? shaftEnd + 18 : shaftEnd - 18;
+
+  return (
+    <g key={`${component.title}-generator`}>
+      <path d={`M ${shaftStart} ${component.y} L ${shaftEnd} ${component.y}`} stroke="#E2E8F0" strokeWidth="4" strokeLinecap="round" />
+      <rect
+        x={Math.min(shaftStart, shaftEnd)}
+        y={component.y - 4}
+        width={Math.abs(shaftEnd - shaftStart)}
+        height="8"
+        rx="4"
+        fill="#0F172A"
+        opacity="0.85"
+      />
+      <rect
+        x={generatorX - 16}
+        y={component.y - 18}
+        width="32"
+        height="36"
+        rx="9"
+        fill="rgba(226,232,240,0.12)"
+        stroke="rgba(226,232,240,0.65)"
+      />
+      <text x={generatorX} y={component.y + 5} textAnchor="middle" fill="#F8FAFC" fontSize="18" fontWeight="700">
+        G
+      </text>
+    </g>
+  );
 };
 
 const renderComponent = (component, accentColor) => {
   const stroke = component.stroke ?? accentColor;
   const lines = splitLabel(component.title);
   const note = component.note;
-  const x = component.x - component.w / 2;
-  const y = component.y - component.h / 2;
-  const textX = x + 48;
-  const topTextY = note ? component.y - 8 : component.y - (lines.length > 1 ? 8 : 2);
+  const axis = component.axis ?? ((component.x < 220 || component.x > 560) && component.y > 180 && component.y < 320 ? 'vertical' : 'horizontal');
+  const labelPosition = component.labelPosition ?? (component.y >= 400 ? 'above' : 'below');
+  const chipWidth = Math.max(118, Math.min(component.w ?? 160, 210));
+  const lineCount = lines.length + (note ? 1 : 0);
+  const chipHeight = 22 + lineCount * 14;
+  const chipY = labelPosition === 'above'
+    ? component.y - (axis === 'vertical' ? 54 : 50) - chipHeight
+    : component.y + (axis === 'vertical' ? 42 : 36);
 
   return (
     <g key={`${component.title}-${component.x}-${component.y}`}>
-      <rect
-        x={x}
-        y={y}
-        width={component.w}
-        height={component.h}
-        rx="18"
-        fill={BOX_FILL}
-        stroke={stroke}
-        strokeOpacity="0.78"
-      />
-      <rect
-        x={x + 10}
-        y={component.y - 15}
-        width="28"
-        height="30"
-        rx="10"
-        fill="rgba(255,255,255,0.03)"
-        stroke={BOX_BORDER}
-      />
-      <g transform={`translate(${x + 24} ${component.y})`}>
-        {renderIcon(component.kind, stroke)}
+      <g transform={`translate(${component.x} ${component.y}) ${axis === 'vertical' ? 'rotate(-90)' : ''}`}>
+        {renderSymbol(component.kind, stroke)}
       </g>
+      {renderGenerator(component)}
+      <rect
+        x={component.x - chipWidth / 2}
+        y={chipY}
+        width={chipWidth}
+        height={chipHeight}
+        rx="14"
+        fill="rgba(15, 23, 42, 0.9)"
+        stroke="rgba(255,255,255,0.08)"
+      />
       {lines.map((line, index) => (
         <text
           key={`${component.title}-${line}-${index}`}
-          x={textX}
-          y={topTextY + index * 16}
+          x={component.x}
+          y={chipY + 18 + index * 14}
+          textAnchor="middle"
           fill="#E2E8F0"
-          fontSize="14"
+          fontSize="13"
           fontWeight="700"
         >
           {line}
         </text>
       ))}
       {note && (
-        <text x={textX} y={component.y + 18} fill="#94A3B8" fontSize="12">
+        <text
+          x={component.x}
+          y={chipY + 18 + lines.length * 14}
+          textAnchor="middle"
+          fill="#94A3B8"
+          fontSize="11.5"
+        >
           {note}
         </text>
       )}
